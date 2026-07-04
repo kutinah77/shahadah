@@ -1,0 +1,6 @@
+{
+  "name": "شهادتي",
+  "description": "تطبيق لتوليد شهادة درجات الطالب الرسمية بصيغة PDF ومشاركتها وطباعتها",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

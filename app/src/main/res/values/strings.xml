@@ -1,0 +1,49 @@
+<resources>
+    <string name="app_name">شهادتي</string>
+    <string name="student_info_title">البيانات الشخصية للطالب</string>
+    <string name="student_name_label">الاسم الكامل للطالب</string>
+    <string name="student_name_placeholder">أدخل اسم الطالب رباعياً</string>
+    <string name="seat_number_label">رقم الجلوس</string>
+    <string name="seat_number_placeholder">أدخل رقم الجلوس</string>
+    <string name="governorate_label">المحافظة</string>
+    <string name="governorate_placeholder">اختر المحافظة</string>
+    <string name="grades_title">درجات المواد الدراسية</string>
+    
+    <string name="sub_quran">القرآن الكريم</string>
+    <string name="sub_islamic">التربية الإسلامية</string>
+    <string name="sub_arabic">اللغة العربية</string>
+    <string name="sub_english">اللغة الإنجليزية</string>
+    <string name="sub_math">الرياضيات</string>
+    <string name="sub_science">العلوم</string>
+    <string name="sub_social">الاجتماعيات</string>
+    <string name="sub_physics">الفيزياء</string>
+    <string name="sub_chemistry">الكيمياء</string>
+    <string name="sub_biology">الأحياء</string>
+    
+    <string name="cert_type_basic">الشهادة الأساسية</string>
+    <string name="cert_type_secondary">الشهادة الثانوية</string>
+    <string name="pdf_certificate_title_basic">كشف درجات إتمام مرحلة التعليم الأساسي</string>
+    <string name="pdf_certificate_title_secondary">كشف درجات إتمام مرحلة التعليم الثانوي - العلمي</string>
+
+    <string name="grade_placeholder">0 - 100</string>
+    <string name="result_summary_title">ملخص النتيجة</string>
+    <string name="total_label">المجموع الكلي:</string>
+    <string name="average_label">المعدل:</string>
+    <string name="status_label">النتيجة العامة:</string>
+    <string name="status_passed">ناجح</string>
+    <string name="status_failed">راسب</string>
+    
+    <string name="btn_generate_pdf">توليد الشهادة الأنيقة</string>
+    <string name="btn_print_pdf">طباعة الشهادة</string>
+    <string name="btn_share_whatsapp">مشاركة عبر الواتساب</string>
+    
+    <string name="pdf_header_country">الجمهورية اليمنية</string>
+    <string name="pdf_header_ministry">وزارة التربية والتعليم</string>
+    <string name="pdf_header_department">قطاع المناهج والتوجيه</string>
+    <string name="pdf_certificate_title">كشف درجات إتمام مرحلة التعليم الأساسي</string>
+    <string name="pdf_footer_note">تنبيه: هذه النتيجة مبنية على استعلام الطالب عبر رسائل SMS ولا تعتبر مستنداً رسمياً نهائياً.</string>
+    
+    <string name="error_empty_fields">يرجى ملء جميع الحقول والدرجات أولاً!</string>
+    <string name="error_invalid_grade">الرجاء إدخال درجة صحيحة بين 0 و 100 في جميع المواد!</string>
+    <string name="success_pdf_generated">تم توليد كشف الدرجات بنجاح وحفظه في التنزيلات!</string>
+</resources>
