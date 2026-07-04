@@ -80,24 +80,13 @@ fun CertificateApp(modifier: Modifier = Modifier) {
     var studentName by remember { mutableStateOf("") }
     var seatNumber by remember { mutableStateOf("") }
     var selectedGov by remember { mutableStateOf("") }
-    var govMenuExpanded by remember { mutableStateOf(false) }
-
+    
     // Distinct grade map states for independent inputs
     val basicGrades = remember { mutableStateMapOf<String, String>() }
     val secondaryGrades = remember { mutableStateMapOf<String, String>() }
 
     // Generated file reference
     var generatedFile by remember { mutableStateOf<File?>(null) }
-
-    // Governorates list
-    val governoratesList = remember {
-        listOf(
-            "أمانة العاصمة", "صنعاء", "عدن", "تعز", "حضرموت", "الحديدة",
-            "إب", "مأرب", "ذمار", "عمران", "حجة", "صعدة", "أبين",
-            "شبوة", "البيضاء", "لحج", "الضالع", "الجوف", "المهرة",
-            "ريمة", "المحويت", "سقطرى"
-        )
-    }
 
     CompositionLocalProvider(androidx.compose.ui.platform.LocalLayoutDirection provides androidx.compose.ui.unit.LayoutDirection.Rtl) {
         LazyColumn(
@@ -327,20 +316,12 @@ fun CertificateApp(modifier: Modifier = Modifier) {
                             ) {
                                 OutlinedTextField(
                                     value = selectedGov,
-                                    onValueChange = {},
-                                    readOnly = true,
+                                    onValueChange = { selectedGov = it },
                                     label = { Text("المحافظة", fontSize = 9.sp, color = Color.Gray) },
-                                    placeholder = { Text("اختر المحافظة", fontSize = 9.sp) },
+                                    placeholder = { Text("أدخل المحافظة", fontSize = 9.sp) },
                                     singleLine = true,
-                                    trailingIcon = {
-                                        IconButton(onClick = { govMenuExpanded = true }) {
-                                            Icon(
-                                                imageVector = Icons.Default.ArrowDropDown,
-                                                contentDescription = "Dropdown list",
-                                                modifier = Modifier.size(18.dp)
-                                            )
-                                        }
-                                    },
+                                    keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
+                                    keyboardActions = KeyboardActions(onDone = { focusManager.clearFocus() }),
                                     colors = OutlinedTextFieldDefaults.colors(
                                         focusedBorderColor = Color.DarkGray,
                                         unfocusedBorderColor = Color(0xFFE2E8F0),
@@ -355,21 +336,6 @@ fun CertificateApp(modifier: Modifier = Modifier) {
                                     textStyle = LocalTextStyle.current.copy(fontSize = 11.sp),
                                     shape = RoundedCornerShape(2.dp)
                                 )
-
-                                DropdownMenu(
-                                    expanded = govMenuExpanded,
-                                    onDismissRequest = { govMenuExpanded = false }
-                                ) {
-                                    governoratesList.forEach { govName ->
-                                        DropdownMenuItem(
-                                            text = { Text(govName, fontSize = 12.sp) },
-                                            onClick = {
-                                                selectedGov = govName
-                                                govMenuExpanded = false
-                                            }
-                                        )
-                                    }
-                                }
                             }
                         }
                     }
