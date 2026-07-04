@@ -30,58 +30,15 @@ fun generateBasicCertificatePdf(
     val pWidth = 595f
     val pHeight = 842f
 
-    // 1. Draw classical borders & corners
-    drawCertificateBorders(canvas, pWidth, pHeight)
+    // 1. Medium Centered Header (Centered & Professionally Aligned)
+    val centerX = 297.5f
+    drawTextCenter(canvas, context.getString(R.string.pdf_header_country), centerX, 40f, 12f, 0xFF0F172A.toInt(), isBold = true)
+    drawTextCenter(canvas, context.getString(R.string.pdf_header_ministry), centerX, 58f, 11f, 0xFF0F172A.toInt(), isBold = true)
+    drawTextCenter(canvas, context.getString(R.string.pdf_header_department), centerX, 74f, 10f, 0xFF64748B.toInt(), isBold = false)
 
-    // 2. Draw official Republican emblem watermark seal (on top left)
-    val cx = 75f
-    val cy = 75f
-    val radius = 25f
-    val sealPaint = Paint().apply {
-        color = 0xFFD97706.toInt() // Gold
-        style = Paint.Style.STROKE
-        strokeWidth = 1.5f
-        isAntiAlias = true
-    }
-    canvas.drawCircle(cx, cy, radius, sealPaint)
-    sealPaint.color = 0xFF1E3A8A.toInt() // Royal Blue concentric inner circle
-    canvas.drawCircle(cx, cy, radius - 4f, sealPaint)
-
-    // Gold Star Crest shape
-    sealPaint.apply {
-        color = 0xFFD97706.toInt()
-        style = Paint.Style.FILL
-    }
-    val starPath = android.graphics.Path().apply {
-        moveTo(cx, cy - 10f)
-        lineTo(cx + 3f, cy - 3f)
-        lineTo(cx + 10f, cy - 3f)
-        lineTo(cx + 4f, cy + 2f)
-        lineTo(cx + 7f, cy + 9f)
-        lineTo(cx, cy + 5f)
-        lineTo(cx - 7f, cy + 9f)
-        lineTo(cx - 4f, cy + 2f)
-        lineTo(cx - 10f, cy - 3f)
-        lineTo(cx - 3f, cy - 3f)
-        close()
-    }
-    canvas.drawPath(starPath, sealPaint)
-
-    // 3. Draw Right Side Header labels
-    val textR = 558f
-    drawTextRight(canvas, context.getString(R.string.pdf_header_country), textR, 40f, 250, 11f, 0xFF0F172A.toInt(), isBold = true)
-    drawTextRight(canvas, context.getString(R.string.pdf_header_ministry), textR, 56f, 250, 10f, 0xFF0F172A.toInt(), isBold = true)
-    drawTextRight(canvas, context.getString(R.string.pdf_header_department), textR, 72f, 250, 9f, 0xFF64748B.toInt(), isBold = false)
-
-    // 4. Document Heading
+    // 2. Document Heading
     val titleY = 115f
-    val linePaint = Paint().apply {
-        color = 0xFFD97706.toInt()
-        strokeWidth = 1.2f
-        style = Paint.Style.STROKE
-    }
-    canvas.drawLine(140f, titleY + 14f, 455f, titleY + 14f, linePaint)
-    drawTextCenter(canvas, context.getString(R.string.pdf_certificate_title_basic), 297.5f, titleY - 5f, 13.5f, 0xFF1E3A8A.toInt(), isBold = true)
+    drawTextCenter(canvas, context.getString(R.string.pdf_certificate_title_basic), centerX, titleY, 14f, 0xFF1E3A8A.toInt(), isBold = true)
 
     // 5. Personal Details Card Box
     val infoY = 155f
@@ -280,25 +237,6 @@ fun generateBasicCertificatePdf(
     // Director of exams
     drawTextCenter(canvas, "مدير إدارة الامتحانات", 465f, sigY, 10f, 0xFF0F172A.toInt(), isBold = true)
     drawTextCenter(canvas, "..........................................", 465f, sigY + 28f, 10f, 0xFF94A3B8.toInt())
-
-    // Center stamp concentric circles (dashed)
-    val stampX = 297.5f
-    val stampY = sigY + 30f
-    val stampRadius = 28f
-
-    val stampPaint = Paint().apply {
-        color = 0xFF3B82F6.toInt() // Blue stamp
-        style = Paint.Style.STROKE
-        strokeWidth = 1f
-        isAntiAlias = true
-        pathEffect = DashPathEffect(floatArrayOf(4f, 2f), 0f)
-    }
-    canvas.drawCircle(stampX, stampY, stampRadius, stampPaint)
-    canvas.drawCircle(stampX, stampY, stampRadius - 4f, stampPaint)
-
-    drawTextCenter(canvas, "وزارة التربية والتعليم", stampX, stampY - 10f, 5.5f, 0xFF3B82F6.toInt(), isBold = true)
-    drawTextCenter(canvas, "الختم الرسمي", stampX, stampY, 5f, 0xFF3B82F6.toInt())
-    drawTextCenter(canvas, "قطاع التوجيه", stampX, stampY + 9f, 5f, 0xFF3B82F6.toInt())
 
     // 9. Document Footer Informative Note
     val footerY = 785f

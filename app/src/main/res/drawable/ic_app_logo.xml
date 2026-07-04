@@ -1,0 +1,18 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="120dp"
+    android:height="120dp"
+    android:viewportWidth="24"
+    android:viewportHeight="24">
+    <!-- Outer concentric gold rings -->
+    <path
+        android:fillColor="#D97706"
+        android:pathData="M12,2c-5.52,0-10,4.48-10,10s4.48,10,10,10,10-4.48,10-10-4.48-10-10-10zm0,18c-4.41,0-8-3.59-8-8s3.59-8,8-8,8,3.59,8,8-3.59,8-8,8z" />
+    <!-- Secondary inner ring -->
+    <path
+        android:fillColor="#F59E0B"
+        android:pathData="M12,5c-3.87,0-7,3.13-7,7s3.13,7,7,7,7-3.13,7-7-3.13-7-7-7zm0,12c-2.76,0-5-2.24-5-5s2.24-5,5-5,5,2.24,5,5-2.24,5-5,5z" />
+    <!-- Inner school graduation cap -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M12,8.5l-5.5,2.75 5.5,2.75 4.5,-2.25v3.25h1v-3.75l-5.5,-2.75zm0,1.2l3.1,1.55 -3.1,1.55 -3.1,-1.55 3.1,-1.55zm2,2.81v1.69c0,0.44 -0.9,0.75 -2,0.75s-2,-0.31 -2,-0.75v-1.69l2,1 2,-1z" />
+</vector>

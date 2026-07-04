@@ -153,36 +153,7 @@ fun drawTableCell(
  * Draws the background board and borders of an official certificate on the canvas
  */
 fun drawCertificateBorders(canvas: Canvas, width: Float, height: Float) {
-    val paint = Paint().apply {
-        color = 0xFF1E3A8A.toInt() // Royal Blue
-        style = Paint.Style.STROKE
-        strokeWidth = 4f
-        isAntiAlias = true
-    }
-    val goldPaint = Paint().apply {
-        color = 0xFFD97706.toInt() // Gold Accent
-        style = Paint.Style.STROKE
-        strokeWidth = 1.5f
-        isAntiAlias = true
-    }
-
-    // Outer double borders
-    canvas.drawRect(20f, 20f, width - 20f, height - 20f, paint)
-    canvas.drawRect(25f, 25f, width - 25f, height - 25f, goldPaint)
-
-    // Classical Arabic corner ornaments
-    // Top-Left Corner
-    canvas.drawLine(20f, 42f, 42f, 42f, paint)
-    canvas.drawLine(42f, 20f, 42f, 42f, paint)
-    // Top-Right Corner
-    canvas.drawLine(width - 20f, 42f, width - 42f, 42f, paint)
-    canvas.drawLine(width - 42f, 20f, width - 42f, 42f, paint)
-    // Bottom-Left Corner
-    canvas.drawLine(20f, height - 42f, 42f, height - 42f, paint)
-    canvas.drawLine(42f, height - 20f, 42f, height - 42f, paint)
-    // Bottom-Right Corner
-    canvas.drawLine(width - 20f, height - 42f, width - 42f, height - 42f, paint)
-    canvas.drawLine(width - 42f, height - 20f, width - 42f, height - 42f, paint)
+    // No frames or borders drawn as requested
 }
 
 /**

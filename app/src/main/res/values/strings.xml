@@ -19,11 +19,17 @@
     <string name="sub_physics">الفيزياء</string>
     <string name="sub_chemistry">الكيمياء</string>
     <string name="sub_biology">الأحياء</string>
+    <string name="sub_math_literary">الرياضيات (أدبي)</string>
+    <string name="sub_history">التاريخ</string>
+    <string name="sub_geography">الجغرافيا</string>
+    <string name="sub_psychology">علم النفس والاجتماع</string>
     
     <string name="cert_type_basic">الشهادة الأساسية</string>
     <string name="cert_type_secondary">الشهادة الثانوية</string>
-    <string name="pdf_certificate_title_basic">كشف درجات إتمام مرحلة التعليم الأساسي</string>
-    <string name="pdf_certificate_title_secondary">كشف درجات إتمام مرحلة التعليم الثانوي - العلمي</string>
+    <string name="cert_type_scientific">القسم العلمي</string>
+    <string name="cert_type_literary">القسم الأدبي</string>
+    <string name="pdf_certificate_title_basic">الشهادة العامة الأساسية</string>
+    <string name="pdf_certificate_title_secondary">الشهادة العامة الثانوية</string>
 
     <string name="grade_placeholder">0 - 100</string>
     <string name="result_summary_title">ملخص النتيجة</string>

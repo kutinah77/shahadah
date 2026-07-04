@@ -18,6 +18,7 @@ fun generateSecondaryCertificatePdf(
     name: String,
     seatNo: String,
     gov: String,
+    isScientific: Boolean,
     subjectGrades: Map<String, Int>
 ): File? {
     val document = PdfDocument()
@@ -30,58 +31,19 @@ fun generateSecondaryCertificatePdf(
     val pWidth = 595f
     val pHeight = 842f
 
-    // 1. Draw classical borders & corners
-    drawCertificateBorders(canvas, pWidth, pHeight)
+    // 1. Medium Centered Header (Centered & Professionally Aligned)
+    val centerX = 297.5f
+    drawTextCenter(canvas, context.getString(R.string.pdf_header_country), centerX, 35f, 11f, 0xFF0F172A.toInt(), isBold = true)
+    drawTextCenter(canvas, context.getString(R.string.pdf_header_ministry), centerX, 51f, 10f, 0xFF0F172A.toInt(), isBold = true)
+    drawTextCenter(canvas, context.getString(R.string.pdf_header_department), centerX, 67f, 9f, 0xFF64748B.toInt(), isBold = false)
 
-    // 2. Draw official Republican emblem watermark seal (on top left)
-    val cx = 75f
-    val cy = 75f
-    val radius = 25f
-    val sealPaint = Paint().apply {
-        color = 0xFFD97706.toInt() // Gold
-        style = Paint.Style.STROKE
-        strokeWidth = 1.5f
-        isAntiAlias = true
-    }
-    canvas.drawCircle(cx, cy, radius, sealPaint)
-    sealPaint.color = 0xFF1E3A8A.toInt() // Royal Blue concentric inner circle
-    canvas.drawCircle(cx, cy, radius - 4f, sealPaint)
+    // 2. Document Heading
+    val titleY = 100f
+    drawTextCenter(canvas, context.getString(R.string.pdf_certificate_title_secondary), centerX, titleY, 13.5f, 0xFF1E3A8A.toInt(), isBold = true)
 
-    // Gold Star Crest shape
-    sealPaint.apply {
-        color = 0xFFD97706.toInt()
-        style = Paint.Style.FILL
-    }
-    val starPath = android.graphics.Path().apply {
-        moveTo(cx, cy - 10f)
-        lineTo(cx + 3f, cy - 3f)
-        lineTo(cx + 10f, cy - 3f)
-        lineTo(cx + 4f, cy + 2f)
-        lineTo(cx + 7f, cy + 9f)
-        lineTo(cx, cy + 5f)
-        lineTo(cx - 7f, cy + 9f)
-        lineTo(cx - 4f, cy + 2f)
-        lineTo(cx - 10f, cy - 3f)
-        lineTo(cx - 3f, cy - 3f)
-        close()
-    }
-    canvas.drawPath(starPath, sealPaint)
-
-    // 3. Draw Right Side Header labels
-    val textR = 558f
-    drawTextRight(canvas, context.getString(R.string.pdf_header_country), textR, 40f, 250, 11f, 0xFF0F172A.toInt(), isBold = true)
-    drawTextRight(canvas, context.getString(R.string.pdf_header_ministry), textR, 56f, 250, 10f, 0xFF0F172A.toInt(), isBold = true)
-    drawTextRight(canvas, context.getString(R.string.pdf_header_department), textR, 72f, 250, 9f, 0xFF64748B.toInt(), isBold = false)
-
-    // 4. Document Heading
-    val titleY = 115f
-    val linePaint = Paint().apply {
-        color = 0xFFD97706.toInt()
-        strokeWidth = 1.2f
-        style = Paint.Style.STROKE
-    }
-    canvas.drawLine(140f, titleY + 14f, 455f, titleY + 14f, linePaint)
-    drawTextCenter(canvas, context.getString(R.string.pdf_certificate_title_secondary), 297.5f, titleY - 5f, 13.5f, 0xFF1E3A8A.toInt(), isBold = true)
+    // 3. Section Subtitle under title (Exclusively for Secondary)
+    val sectionStr = if (isScientific) "القسم العلمي" else "القسم الأدبي"
+    drawTextCenter(canvas, sectionStr, centerX, titleY + 18f, 11f, 0xFFD97706.toInt(), isBold = true)
 
     // 5. Personal Details Card Box
     val infoY = 155f
@@ -114,7 +76,8 @@ fun generateSecondaryCertificatePdf(
     val arabicYear = formatToArabicIndicDigits("2025") + " / " + formatToArabicIndicDigits("2026") + " م"
     drawTextRight(canvas, "العام الدراسي:   $arabicYear", colLeftX, infoY + 36f, 240, 9.5f, 0xFF0F172A.toInt(), isBold = false)
 
-    drawTextRight(canvas, "مصدر البيانات:   نظام كشوف الاستعلام لطلاب مرحلة التعليم الثانوي - العلمي المعتمد", colRightX, infoY + 60f, 490, 8.5f, 0xFF64748B.toInt(), isBold = false)
+    val sourceText = "مصدر البيانات:   نظام كشوف الاستعلام لطلاب مرحلة التعليم الثانوي - " + (if (isScientific) "العلمي" else "الأدبي") + " المعتمد"
+    drawTextRight(canvas, sourceText, colRightX, infoY + 60f, 490, 8.5f, 0xFF64748B.toInt(), isBold = false)
 
     // 6. Grades Table Grid (8 rows now!)
     val headers = listOf("م", "المادة الدراسية", "النهاية العظمى", "النهاية الصغرى", "الدرجة المحصلة", "الدرجة كتابةً", "النتيجة")
@@ -141,16 +104,29 @@ fun generateSecondaryCertificatePdf(
     }
 
     // Subjects list for secondary education
-    val subjects = listOf(
-        Pair("quran", R.string.sub_quran),
-        Pair("islamic", R.string.sub_islamic),
-        Pair("arabic", R.string.sub_arabic),
-        Pair("english", R.string.sub_english),
-        Pair("math", R.string.sub_math),
-        Pair("physics", R.string.sub_physics),
-        Pair("chemistry", R.string.sub_chemistry),
-        Pair("biology", R.string.sub_biology)
-    )
+    val subjects = if (isScientific) {
+        listOf(
+            Pair("quran", R.string.sub_quran),
+            Pair("islamic", R.string.sub_islamic),
+            Pair("arabic", R.string.sub_arabic),
+            Pair("english", R.string.sub_english),
+            Pair("math", R.string.sub_math),
+            Pair("physics", R.string.sub_physics),
+            Pair("chemistry", R.string.sub_chemistry),
+            Pair("biology", R.string.sub_biology)
+        )
+    } else {
+        listOf(
+            Pair("quran", R.string.sub_quran),
+            Pair("islamic", R.string.sub_islamic),
+            Pair("arabic", R.string.sub_arabic),
+            Pair("english", R.string.sub_english),
+            Pair("math_literary", R.string.sub_math_literary),
+            Pair("history", R.string.sub_history),
+            Pair("geography", R.string.sub_geography),
+            Pair("psychology", R.string.sub_psychology)
+        )
+    }
 
     // Draw subjects rows
     var currentY = tableY + headerHeight
@@ -281,25 +257,6 @@ fun generateSecondaryCertificatePdf(
     // Director of exams
     drawTextCenter(canvas, "مدير إدارة الامتحانات", 465f, sigY, 10f, 0xFF0F172A.toInt(), isBold = true)
     drawTextCenter(canvas, "..........................................", 465f, sigY + 28f, 10f, 0xFF94A3B8.toInt())
-
-    // Center stamp concentric circles (dashed)
-    val stampX = 297.5f
-    val stampY = sigY + 30f
-    val stampRadius = 28f
-
-    val stampPaint = Paint().apply {
-        color = 0xFF3B82F6.toInt() // Blue stamp
-        style = Paint.Style.STROKE
-        strokeWidth = 1f
-        isAntiAlias = true
-        pathEffect = DashPathEffect(floatArrayOf(4f, 2f), 0f)
-    }
-    canvas.drawCircle(stampX, stampY, stampRadius, stampPaint)
-    canvas.drawCircle(stampX, stampY, stampRadius - 4f, stampPaint)
-
-    drawTextCenter(canvas, "وزارة التربية والتعليم", stampX, stampY - 10f, 5.5f, 0xFF3B82F6.toInt(), isBold = true)
-    drawTextCenter(canvas, "الختم الرسمي", stampX, stampY, 5f, 0xFF3B82F6.toInt())
-    drawTextCenter(canvas, "قطاع التوجيه", stampX, stampY + 9f, 5f, 0xFF3B82F6.toInt())
 
     // 9. Document Footer Informative Note
     val footerY = 785f

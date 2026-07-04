@@ -25,25 +25,41 @@ import androidx.compose.ui.unit.sp
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SecondaryCertFragment(
+    isScientific: Boolean,
     grades: MutableMap<String, String>,
     onGeneratePdf: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     val focusManager = LocalFocusManager.current
 
-    val subjects = listOf(
-        Pair("quran", R.string.sub_quran),
-        Pair("islamic", R.string.sub_islamic),
-        Pair("arabic", R.string.sub_arabic),
-        Pair("english", R.string.sub_english),
-        Pair("math", R.string.sub_math),
-        Pair("physics", R.string.sub_physics),
-        Pair("chemistry", R.string.sub_chemistry),
-        Pair("biology", R.string.sub_biology)
-    )
+    val subjects = remember(isScientific) {
+        if (isScientific) {
+            listOf(
+                Pair("quran", R.string.sub_quran),
+                Pair("islamic", R.string.sub_islamic),
+                Pair("arabic", R.string.sub_arabic),
+                Pair("english", R.string.sub_english),
+                Pair("math", R.string.sub_math),
+                Pair("physics", R.string.sub_physics),
+                Pair("chemistry", R.string.sub_chemistry),
+                Pair("biology", R.string.sub_biology)
+            )
+        } else {
+            listOf(
+                Pair("quran", R.string.sub_quran),
+                Pair("islamic", R.string.sub_islamic),
+                Pair("arabic", R.string.sub_arabic),
+                Pair("english", R.string.sub_english),
+                Pair("math_literary", R.string.sub_math_literary),
+                Pair("history", R.string.sub_history),
+                Pair("geography", R.string.sub_geography),
+                Pair("psychology", R.string.sub_psychology)
+            )
+        }
+    }
 
     // Ensure state keys exist
-    LaunchedEffect(Unit) {
+    LaunchedEffect(isScientific, subjects) {
         subjects.forEach { pair ->
             if (!grades.containsKey(pair.first)) {
                 grades[pair.first] = ""
@@ -51,20 +67,22 @@ fun SecondaryCertFragment(
         }
     }
 
-    // Calculations
-    val totalSum = remember(grades.values.toList()) {
-        grades.values.mapNotNull { it.toIntOrNull() }.sum()
+    // Calculations based only on current subjects
+    val totalSum = remember(grades.toMap(), subjects) {
+        subjects.map { it.first }.mapNotNull { grades[it]?.toIntOrNull() }.sum()
     }
 
-    val isPassedAll = remember(grades.values.toList()) {
-        val validGrades = grades.values.mapNotNull { it.toIntOrNull() }
+    val isPassedAll = remember(grades.toMap(), subjects) {
+        val currentSubjectKeys = subjects.map { it.first }
+        val validGrades = currentSubjectKeys.mapNotNull { grades[it]?.toIntOrNull() }
         if (validGrades.size == subjects.size) {
             validGrades.all { it >= 50 }
         } else false
     }
 
-    val average = remember(grades.values.toList()) {
-        val validGrades = grades.values.mapNotNull { it.toIntOrNull() }
+    val average = remember(grades.toMap(), subjects) {
+        val currentSubjectKeys = subjects.map { it.first }
+        val validGrades = currentSubjectKeys.mapNotNull { grades[it]?.toIntOrNull() }
         if (validGrades.size == subjects.size) {
             validGrades.sum() / subjects.size.toDouble()
         } else 0.0
@@ -78,7 +96,7 @@ fun SecondaryCertFragment(
     ) {
         // Section header
         Text(
-            text = "درجات التعليم الثانوي - القسم العلمي (8 مواد)",
+            text = if (isScientific) "درجات التعليم الثانوي - القسم العلمي (8 مواد)" else "درجات التعليم الثانوي - القسم الأدبي (8 مواد)",
             fontSize = 11.sp,
             fontWeight = FontWeight.Bold,
             color = Color.Black,
@@ -184,7 +202,8 @@ fun SecondaryCertFragment(
                     color = Color(0xFF78350F)
                 )
 
-                val hasAllGrades = grades.values.filter { it.isNotEmpty() }.size == subjects.size
+                val currentSubjectKeys = remember(subjects) { subjects.map { it.first } }
+                val hasAllGrades = currentSubjectKeys.all { grades[it]?.isNotEmpty() == true }
                 val statusText = if (!hasAllGrades) "معلق" else if (isPassedAll) "ناجح" else "راسب"
                 val statusColor = if (!hasAllGrades) Color.Gray else if (isPassedAll) Color(0xFF047857) else Color(0xFFB91C1C)
 

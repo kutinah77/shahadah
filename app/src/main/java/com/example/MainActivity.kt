@@ -6,8 +6,10 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
+import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -18,6 +20,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.School
 import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material3.*
@@ -70,6 +73,7 @@ fun CertificateApp(modifier: Modifier = Modifier) {
 
     // Switching state (true: Basic Certificate, false: Secondary Certificate)
     var isBasicSelected by remember { mutableStateOf(true) }
+    var isScientificSelected by remember { mutableStateOf(true) }
     var switchMenuExpanded by remember { mutableStateOf(false) }
 
     // Personal info states
@@ -103,99 +107,123 @@ fun CertificateApp(modifier: Modifier = Modifier) {
             contentPadding = PaddingValues(bottom = 16.dp),
             verticalArrangement = Arrangement.spacedBy(4.dp)
         ) {
-            // 1. Top Decorative Hero Banner (Sleek, slimmed down to fit nicely)
-            item {
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(110.dp)
-                ) {
-                    Image(
-                        painter = painterResource(id = R.drawable.img_hero_banner),
-                        contentDescription = "Academic Banner",
-                        modifier = Modifier.fillMaxSize(),
-                        contentScale = ContentScale.Crop
-                    )
-                    // Semi-transparent brand blue gradient overlay
-                    Box(
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .background(
-                                androidx.compose.ui.graphics.Brush.verticalGradient(
-                                    colors = listOf(
-                                        Color.Transparent,
-                                        Color(0xFF1E3A8A).copy(alpha = 0.85f)
-                                    )
-                                )
-                            )
-                    )
-                    // Application Title
-                    Text(
-                        text = "تطبيق شهادتي الإلكتروني",
-                        color = Color.White,
-                        fontSize = 18.sp,
-                        fontWeight = FontWeight.Bold,
-                        modifier = Modifier
-                            .align(Alignment.BottomStart)
-                            .padding(12.dp)
-                    )
-                }
-            }
-
             // 2. Intelligent Thin Header & Switcher
             item {
-                Box(
+                Column(
                     modifier = Modifier
                         .fillMaxWidth()
                         .background(Color(0xFFF1F5F9))
-                        .padding(horizontal = 4.dp, vertical = 2.dp)
+                        .padding(horizontal = 4.dp, vertical = 4.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.spacedBy(4.dp)
                 ) {
+                    // Row for Basic vs Secondary selection
                     Row(
                         modifier = Modifier
-                            .align(Alignment.Center)
-                            .testTag("switch_header_trigger"),
-                        verticalAlignment = Alignment.CenterVertically
+                            .fillMaxWidth()
+                            .padding(horizontal = 4.dp),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
-                        // Styled dropdown button
-                        TextButton(
-                            onClick = { switchMenuExpanded = true },
-                            colors = ButtonDefaults.textButtonColors(contentColor = Color(0xFF1E3A8A)),
-                            contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp)
+                        Button(
+                            onClick = {
+                                isBasicSelected = true
+                                generatedFile = null
+                            },
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = if (isBasicSelected) Color(0xFF1E3A8A) else Color(0xFFE2E8F0),
+                                contentColor = if (isBasicSelected) Color.White else Color(0xFF475569)
+                            ),
+                            shape = RoundedCornerShape(4.dp),
+                            modifier = Modifier
+                                .weight(1f)
+                                .height(38.dp)
+                                .testTag("select_basic_cert"),
+                            contentPadding = PaddingValues(0.dp)
+                        ) {
+                            Text("الشهادة الأساسية", fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                        }
+                        Button(
+                            onClick = {
+                                isBasicSelected = false
+                                generatedFile = null
+                            },
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = if (!isBasicSelected) Color(0xFF1E3A8A) else Color(0xFFE2E8F0),
+                                contentColor = if (!isBasicSelected) Color.White else Color(0xFF475569)
+                            ),
+                            shape = RoundedCornerShape(4.dp),
+                            modifier = Modifier
+                                .weight(1f)
+                                .height(38.dp)
+                                .testTag("select_secondary_cert"),
+                            contentPadding = PaddingValues(0.dp)
+                        ) {
+                            Text("الشهادة الثانوية", fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                        }
+                    }
+
+                    // Secondary Subsections: Scientific vs Literary
+                    AnimatedVisibility(
+                        visible = !isBasicSelected,
+                        enter = expandVertically() + fadeIn(),
+                        exit = shrinkVertically() + fadeOut()
+                    ) {
+                        Column(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(top = 2.dp),
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            verticalArrangement = Arrangement.spacedBy(2.dp)
                         ) {
                             Text(
-                                text = if (isBasicSelected) "الشهادة الأساسية" else "الشهادة الثانوية",
-                                fontSize = 14.sp,
-                                fontWeight = FontWeight.Bold
+                                text = "اختر تخصص وقسم الشهادة الثانوية:",
+                                fontSize = 10.sp,
+                                fontWeight = FontWeight.SemiBold,
+                                color = Color(0xFF475569)
                             )
-                            Icon(
-                                imageVector = Icons.Default.ArrowDropDown,
-                                contentDescription = "Dropdown menu",
-                                modifier = Modifier.size(18.dp)
-                            )
-                        }
-
-                        DropdownMenu(
-                            expanded = switchMenuExpanded,
-                            onDismissRequest = { switchMenuExpanded = false }
-                        ) {
-                            DropdownMenuItem(
-                                text = { Text("الشهادة الأساسية", fontSize = 13.sp) },
-                                onClick = {
-                                    isBasicSelected = true
-                                    switchMenuExpanded = false
-                                    generatedFile = null // Reset output on switch
-                                },
-                                modifier = Modifier.testTag("select_basic_cert")
-                            )
-                            DropdownMenuItem(
-                                text = { Text("الشهادة الثانوية", fontSize = 13.sp) },
-                                onClick = {
-                                    isBasicSelected = false
-                                    switchMenuExpanded = false
-                                    generatedFile = null // Reset output on switch
-                                },
-                                modifier = Modifier.testTag("select_secondary_cert")
-                            )
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(horizontal = 4.dp),
+                                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
+                                Button(
+                                    onClick = {
+                                        isScientificSelected = true
+                                        generatedFile = null
+                                    },
+                                    colors = ButtonDefaults.buttonColors(
+                                        containerColor = if (isScientificSelected) Color(0xFFD97706) else Color(0xFFE2E8F0),
+                                        contentColor = if (isScientificSelected) Color.White else Color(0xFF475569)
+                                    ),
+                                    shape = RoundedCornerShape(4.dp),
+                                    modifier = Modifier
+                                        .weight(1f)
+                                        .height(34.dp)
+                                        .testTag("select_scientific"),
+                                    contentPadding = PaddingValues(0.dp)
+                                ) {
+                                    Text("قسم علمي", fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                                }
+                                Button(
+                                    onClick = {
+                                        isScientificSelected = false
+                                        generatedFile = null
+                                    },
+                                    colors = ButtonDefaults.buttonColors(
+                                        containerColor = if (!isScientificSelected) Color(0xFFD97706) else Color(0xFFE2E8F0),
+                                        contentColor = if (!isScientificSelected) Color.White else Color(0xFF475569)
+                                    ),
+                                    shape = RoundedCornerShape(4.dp),
+                                    modifier = Modifier
+                                        .weight(1f)
+                                        .height(34.dp)
+                                        .testTag("select_literary"),
+                                    contentPadding = PaddingValues(0.dp)
+                                ) {
+                                    Text("قسم أدبي", fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                                }
+                            }
                         }
                     }
                 }
@@ -384,20 +412,27 @@ fun CertificateApp(modifier: Modifier = Modifier) {
                         )
                     } else {
                         SecondaryCertFragment(
+                            isScientific = isScientificSelected,
                             grades = secondaryGrades,
                             onGeneratePdf = {
-                                val missing = secondaryGrades.size < 8 || secondaryGrades.values.any { it.isEmpty() }
+                                val activeKeys = if (isScientificSelected) {
+                                    listOf("quran", "islamic", "arabic", "english", "math", "physics", "chemistry", "biology")
+                                } else {
+                                    listOf("quran", "islamic", "arabic", "english", "math_literary", "history", "geography", "psychology")
+                                }
+                                val missing = activeKeys.any { secondaryGrades[it]?.isEmpty() != false }
                                 if (studentName.trim().isEmpty() || seatNumber.trim().isEmpty() || selectedGov.isEmpty() || missing) {
                                     Toast.makeText(context, context.getString(R.string.error_empty_fields), Toast.LENGTH_LONG).show()
                                     return@SecondaryCertFragment
                                 }
 
-                                val intGrades = secondaryGrades.mapValues { it.value.toIntOrNull() ?: 0 }
+                                val intGrades = activeKeys.associateWith { secondaryGrades[it]?.toIntOrNull() ?: 0 }
                                 val pdfFile = generateSecondaryCertificatePdf(
                                     context = context,
                                     name = studentName.trim(),
                                     seatNo = seatNumber.trim(),
                                     gov = selectedGov,
+                                    isScientific = isScientificSelected,
                                     subjectGrades = intGrades
                                 )
 
