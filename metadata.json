@@ -1,6 +1,6 @@
 {
-  "name": "شهادتي",
-  "description": "تطبيق لتوليد شهادة درجات الطالب الرسمية بصيغة PDF ومشاركتها وطباعتها",
+  "name": "الدفتر الذكي",
+  "description": "تطبيق الدفتر الذكي لإدارة الميزانية والإيرادات والمصروفات وحسابات الديون والمخزون بمرونة ودقة فائقة.",
   "requestFramePermissions": [],
   "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
 }
