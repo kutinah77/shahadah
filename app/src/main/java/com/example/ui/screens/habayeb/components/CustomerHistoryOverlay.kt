@@ -21,6 +21,7 @@ import androidx.compose.animation.slideOutVertically
 import androidx.compose.ui.draw.shadow
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.rememberScrollState
@@ -99,10 +100,12 @@ fun CustomerHistoryOverlay(
     val activeCustomer = customers.find { it.id == customer.id } ?: customer
 
     val transactions by viewModel.habayebTransactionsState.collectAsStateWithLifecycle()
+    val settings by viewModel.settingsState.collectAsStateWithLifecycle()
     val context = LocalContext.current
     val haptic = LocalHapticFeedback.current
     val isPrivacyMode by viewModel.isPrivacyModeEnabled.collectAsStateWithLifecycle()
     val coroutineScope = rememberCoroutineScope()
+    val listState = rememberLazyListState()
     var isPdfExporting by remember { mutableStateOf(false) }
     var showRateModifyDialog by remember { mutableStateOf(false) }
     var exchangeTxToModify by remember { mutableStateOf<HabayebTransaction?>(null) }
@@ -209,7 +212,7 @@ fun CustomerHistoryOverlay(
 
             // 4. Currency filter
             val matchesCurrency = if (selectedCurrencyFilter != null) {
-                val (txCurrency, _) = com.example.ui.screens.habayeb.utils.CurrencyConfig.getTransactionCurrencyAndAmount(tx, currencySymbol)
+                val (txCurrency, _) = com.example.ui.screens.habayeb.utils.CurrencyConfig.getTransactionCurrencyAndAmount(tx, currencySymbol, settings.exchangeRatesJson)
                 txCurrency == selectedCurrencyFilter
             } else {
                 true
@@ -220,43 +223,43 @@ fun CustomerHistoryOverlay(
         baseFiltered.sortedByDescending { it.timestamp }
     }
 
-    val currencyKeys = remember(allCustomerTxs, currencySymbol) {
+    val currencyKeys = remember(allCustomerTxs, currencySymbol, settings.exchangeRatesJson) {
         (listOf(currencySymbol) + allCustomerTxs.map { 
-            com.example.ui.screens.habayeb.utils.CurrencyConfig.getTransactionCurrencyAndAmount(it, currencySymbol).first 
+            com.example.ui.screens.habayeb.utils.CurrencyConfig.getTransactionCurrencyAndAmount(it, currencySymbol, settings.exchangeRatesJson).first 
         }).distinct()
     }
 
-    val owedByThemMap = remember(allCustomerTxs, currencyKeys, currencySymbol) {
+    val owedByThemMap = remember(allCustomerTxs, currencyKeys, currencySymbol, settings.exchangeRatesJson) {
         currencyKeys.associateWith { curr ->
             allCustomerTxs.filter { tx -> tx.type == "OWED_BY_THEM" }.sumOf { tx ->
-                val (txCurrency, amountVal) = com.example.ui.screens.habayeb.utils.CurrencyConfig.getTransactionCurrencyAndAmount(tx, currencySymbol)
+                val (txCurrency, amountVal) = com.example.ui.screens.habayeb.utils.CurrencyConfig.getTransactionCurrencyAndAmount(tx, currencySymbol, settings.exchangeRatesJson)
                 if (txCurrency == curr) amountVal else 0.0
             }
         }
     }
 
-    val paymentByThemMap = remember(allCustomerTxs, currencyKeys, currencySymbol) {
+    val paymentByThemMap = remember(allCustomerTxs, currencyKeys, currencySymbol, settings.exchangeRatesJson) {
         currencyKeys.associateWith { curr ->
             allCustomerTxs.filter { tx -> tx.type == "PAYMENT_BY_THEM" }.sumOf { tx ->
-                val (txCurrency, amountVal) = com.example.ui.screens.habayeb.utils.CurrencyConfig.getTransactionCurrencyAndAmount(tx, currencySymbol)
+                val (txCurrency, amountVal) = com.example.ui.screens.habayeb.utils.CurrencyConfig.getTransactionCurrencyAndAmount(tx, currencySymbol, settings.exchangeRatesJson)
                 if (txCurrency == curr) amountVal else 0.0
             }
         }
     }
 
-    val owedToThemMap = remember(allCustomerTxs, currencyKeys, currencySymbol) {
+    val owedToThemMap = remember(allCustomerTxs, currencyKeys, currencySymbol, settings.exchangeRatesJson) {
         currencyKeys.associateWith { curr ->
             allCustomerTxs.filter { tx -> tx.type == "OWED_TO_THEM" }.sumOf { tx ->
-                val (txCurrency, amountVal) = com.example.ui.screens.habayeb.utils.CurrencyConfig.getTransactionCurrencyAndAmount(tx, currencySymbol)
+                val (txCurrency, amountVal) = com.example.ui.screens.habayeb.utils.CurrencyConfig.getTransactionCurrencyAndAmount(tx, currencySymbol, settings.exchangeRatesJson)
                 if (txCurrency == curr) amountVal else 0.0
             }
         }
     }
 
-    val paymentToThemMap = remember(allCustomerTxs, currencyKeys, currencySymbol) {
+    val paymentToThemMap = remember(allCustomerTxs, currencyKeys, currencySymbol, settings.exchangeRatesJson) {
         currencyKeys.associateWith { curr ->
             allCustomerTxs.filter { tx -> tx.type == "PAYMENT_TO_THEM" }.sumOf { tx ->
-                val (txCurrency, amountVal) = com.example.ui.screens.habayeb.utils.CurrencyConfig.getTransactionCurrencyAndAmount(tx, currencySymbol)
+                val (txCurrency, amountVal) = com.example.ui.screens.habayeb.utils.CurrencyConfig.getTransactionCurrencyAndAmount(tx, currencySymbol, settings.exchangeRatesJson)
                 if (txCurrency == curr) amountVal else 0.0
             }
         }
@@ -273,12 +276,12 @@ fun CustomerHistoryOverlay(
     val netDebt = netDebtMap[primaryDisplayCurrency] ?: 0.0
 
     // Calculate sequential running balances (chronological order)
-    val runningBalances = remember(allCustomerTxs, currencySymbol) {
+    val runningBalances = remember(allCustomerTxs, currencySymbol, settings.exchangeRatesJson) {
         val chronological = allCustomerTxs.sortedBy { it.timestamp }
         val balancesMap = mutableMapOf<String, Double>()
         val currentBalMap = mutableMapOf<String, Double>()
         for (tx in chronological) {
-            val (txCurrency, amountVal) = com.example.ui.screens.habayeb.utils.CurrencyConfig.getTransactionCurrencyAndAmount(tx, currencySymbol)
+            val (txCurrency, amountVal) = com.example.ui.screens.habayeb.utils.CurrencyConfig.getTransactionCurrencyAndAmount(tx, currencySymbol, settings.exchangeRatesJson)
             var currentBal = currentBalMap[txCurrency] ?: 0.0
             when (tx.type) {
                 "OWED_BY_THEM" -> currentBal += amountVal
@@ -331,6 +334,7 @@ fun CustomerHistoryOverlay(
     }
 
     LaunchedEffect(activeCustomer.id) {
+        listState.scrollToItem(0)
         HabayebRecurringManager.checkAndExecuteRecurring(context, viewModel) { count ->
             Toast.makeText(context, context.getString(R.string.customer_history_toast_recurring_added, count, activeCustomer.name), Toast.LENGTH_LONG).show()
         }
@@ -613,11 +617,12 @@ fun CustomerHistoryOverlay(
                             },
                             onCsvExportClick = {
                                 com.example.data.serialization.CsvReportGenerator.generateAndShareCsvReport(
-                                    context,
-                                    coroutineScope,
-                                    activeCustomer,
-                                    allCustomerTxs,
-                                    currencySymbol
+                                    context = context,
+                                    scope = coroutineScope,
+                                    customer = activeCustomer,
+                                    transactions = allCustomerTxs,
+                                    currencySymbol = currencySymbol,
+                                    exchangeRatesJson = settings.exchangeRatesJson
                                 )
                             },
                             onWhatsAppClick = {
@@ -704,6 +709,7 @@ fun CustomerHistoryOverlay(
                     }
                 } else {
                     LazyColumn(
+                        state = listState,
                         modifier = Modifier
                             .fillMaxWidth()
                             .weight(1f),

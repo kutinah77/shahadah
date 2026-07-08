@@ -224,7 +224,7 @@ fun RecurringTransactionPopup(
                                         fontWeight = FontWeight.Bold,
                                         color = MaterialTheme.colorScheme.onSurface
                                     )
-                                    val formattedAmount = try { String.format(Locale.ENGLISH, "%,.0f", transaction.amount) } catch (e: Exception) { transaction.amount.toString() }
+                                    val formattedAmount = com.example.domain.FormatUtils.formatDouble(transaction.amount)
                                     val isPositive = transaction.type == "PAYMENT_BY_THEM" || transaction.type == "OWED_TO_THEM"
                                     val amountColor = if (isPositive) {
                                         if (isDark) Color(0xFF4ADE80) else Color(0xFF16A34A)

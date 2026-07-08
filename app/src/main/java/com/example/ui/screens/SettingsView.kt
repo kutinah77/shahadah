@@ -295,10 +295,19 @@ fun SettingsView(
 
     // Save changes helper (retains structural properties)
     fun saveAllSettings() {
+        var finalJson = settings.exchangeRatesJson
+        if (settings.currencySymbol != currencySymbol) {
+            finalJson = com.example.ui.screens.habayeb.utils.ExchangeRateHelper.migrateRates(
+                settings.exchangeRatesJson,
+                settings.currencySymbol,
+                currencySymbol
+            )
+        }
         val updated = settings.copy(
             currencySymbol = currencySymbol,
             schoolExpensesEnabled = schoolExpenses,
-            isAutoBackupEnabled = isAutoBackupEnabled
+            isAutoBackupEnabled = isAutoBackupEnabled,
+            exchangeRatesJson = finalJson
         )
         viewModel.saveSettings(updated)
     }

@@ -91,7 +91,13 @@ fun TransactionOptionsDialog(
                             color = if (isDark) MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f) else Color(0xFFCBD5E1),
                             modifier = Modifier.padding(horizontal = 4.dp)
                         )
-                        val formattedAmount = try { String.format(Locale.ENGLISH, "%,.0f", transaction.amount) } catch (e: Exception) { transaction.amount.toString() }
+                        val txAmount = if (transaction.is_foreign) transaction.foreign_amount else transaction.amount
+                        val txCurrency = if (transaction.currency_code.isNotBlank() && transaction.currency_code != "DEFAULT") {
+                            transaction.currency_code
+                        } else {
+                            stringResource(id = R.string.habayeb_currency_rial)
+                        }
+                        val formattedAmount = com.example.domain.FormatUtils.formatDouble(txAmount)
                         val isPositive = transaction.type == "PAYMENT_BY_THEM" || transaction.type == "OWED_TO_THEM"
                         val amountColor = if (isPositive) {
                             if (isDark) Color(0xFF4ADE80) else Color(0xFF16A34A)
@@ -99,7 +105,7 @@ fun TransactionOptionsDialog(
                             if (isDark) Color(0xFFF87171) else Color(0xFFDC2626)
                         }
                         Text(
-                            text = "$formattedAmount " + stringResource(id = R.string.habayeb_currency_rial),
+                            text = "$formattedAmount $txCurrency",
                             fontSize = 13.sp,
                             fontWeight = FontWeight.Black,
                             color = amountColor

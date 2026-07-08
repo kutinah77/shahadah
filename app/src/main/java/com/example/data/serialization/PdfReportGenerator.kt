@@ -577,10 +577,10 @@ object PdfReportGenerator {
             // Draw Owed or Payment values
             val formattedAmount = if (tx.is_foreign) {
                 if (tx.is_rate_calculated) {
-                    String.format(Locale.ENGLISH, "%,.0f", tx.equivalent_amount)
+                    com.example.domain.FormatUtils.formatDouble(tx.equivalent_amount)
                 } else "-"
             } else {
-                String.format(Locale.ENGLISH, "%,.2f", tx.amount)
+                com.example.domain.FormatUtils.formatDouble(tx.amount)
             }
             if (tx.type == "OWED_BY_THEM" || tx.type == "PAYMENT_TO_THEM") {
                 // Owed cell (Red tint badge)

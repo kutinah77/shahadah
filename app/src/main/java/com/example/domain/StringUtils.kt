@@ -106,12 +106,12 @@ object FormatUtils {
         val finalSymbol = symbol.ifEmpty { context?.getString(com.example.R.string.currency_yer) ?: "ر.ي" }
         return try {
             val symbols = DecimalFormatSymbols(Locale.ENGLISH)
-            val formatter = DecimalFormat("#,##0", symbols)
+            val formatter = DecimalFormat("#,##0.####", symbols)
             val formatted = formatter.format(amount)
             "$formatted $finalSymbol"
         } catch (e: Exception) {
             val symbols = DecimalFormatSymbols(Locale.ENGLISH)
-            val formatter = DecimalFormat("#,##0", symbols)
+            val formatter = DecimalFormat("#,##0.####", symbols)
             val formatted = formatter.format(amount)
             "$formatted $finalSymbol"
         }
@@ -122,14 +122,30 @@ object FormatUtils {
         val finalSymbol = symbol.ifEmpty { context?.getString(com.example.R.string.currency_yer) ?: "ر.ي" }
         return try {
             val symbols = DecimalFormatSymbols(Locale.ENGLISH)
-            val formatter = DecimalFormat("#,##0", symbols)
+            val formatter = DecimalFormat("#,##0.####", symbols)
             val formatted = formatter.format(amount)
             "$formatted $finalSymbol"
         } catch (e: Exception) {
             val symbols = DecimalFormatSymbols(Locale.ENGLISH)
-            val formatter = DecimalFormat("#,##0", symbols)
+            val formatter = DecimalFormat("#,##0.####", symbols)
             val formatted = formatter.format(amount)
             "$formatted $finalSymbol"
         }
+    }
+
+    @JvmStatic
+    fun formatDouble(value: Double, symbol: String = ""): String {
+        val symbols = DecimalFormatSymbols(Locale.ENGLISH)
+        val formatter = DecimalFormat("#,##0.####", symbols)
+        val formatted = formatter.format(value)
+        return if (symbol.isNotEmpty()) "$formatted $symbol" else formatted
+    }
+
+    @JvmStatic
+    fun formatBigDecimal(value: BigDecimal, symbol: String = ""): String {
+        val symbols = DecimalFormatSymbols(Locale.ENGLISH)
+        val formatter = DecimalFormat("#,##0.####", symbols)
+        val formatted = formatter.format(value)
+        return if (symbol.isNotEmpty()) "$formatted $symbol" else formatted
     }
 }

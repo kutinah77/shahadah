@@ -81,9 +81,9 @@ fun CustomerTransactionRow(
     val rowBgColor = if (isSelected) activeThemeColor.copy(alpha = 0.08f) else MaterialTheme.colorScheme.surface
     val borderColor = if (isSelected) activeThemeColor else MaterialTheme.colorScheme.outlineVariant
 
-    val formattedHistBal = try { String.format(Locale.ENGLISH, "%,.0f", kotlin.math.abs(currentHistBalance)) } catch (e: Exception) { kotlin.math.abs(currentHistBalance).toString() }
+    val formattedHistBal = com.example.domain.FormatUtils.formatDouble(kotlin.math.abs(currentHistBalance))
     val amountToFormat = if (tx.is_foreign) tx.foreign_amount else tx.amount
-    val formattedAmount = try { String.format(Locale.ENGLISH, "%,.0f", amountToFormat) } catch (e: Exception) { amountToFormat.toString() }
+    val formattedAmount = com.example.domain.FormatUtils.formatDouble(amountToFormat)
 
     Card(
         modifier = Modifier
@@ -310,7 +310,7 @@ fun CustomerTransactionRow(
                         )
                     }
                     if (tx.is_foreign && tx.is_rate_calculated) {
-                        val formattedEquiv = try { String.format(Locale.ENGLISH, "%,.0f", tx.equivalent_amount) } catch (e: Exception) { tx.equivalent_amount.toString() }
+                        val formattedEquiv = com.example.domain.FormatUtils.formatDouble(tx.equivalent_amount)
                         AutoSizeText(
                             text = "($formattedEquiv $currencySymbol)",
                             fontSize = 9.sp,

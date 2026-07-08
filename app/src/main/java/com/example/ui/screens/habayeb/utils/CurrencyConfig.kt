@@ -1,6 +1,7 @@
 package com.example.ui.screens.habayeb.utils
 
 import com.example.data.local.entities.HabayebTransaction
+import java.util.Locale
 
 data class Currency(
     val code: String,
@@ -53,26 +54,57 @@ object CurrencyConfig {
 
     /**
      * Resolves the true currency code and transaction amount for a given transaction,
-     * handling both modern schema fields and legacy description tags.
+     * handling both modern schema fields and legacy description tags,
+     * fully taking into account base currency shifts.
      */
-    fun getTransactionCurrencyAndAmount(tx: HabayebTransaction, defaultCurrencySymbol: String): Pair<String, Double> {
+    fun getTransactionCurrencyAndAmount(
+        tx: HabayebTransaction,
+        defaultCurrencySymbol: String,
+        exchangeRatesJson: String = "{}"
+    ): Pair<String, Double> {
         // 1. Modern explicit foreign transaction
         if (tx.is_foreign) {
+            // If transaction is in the current default base currency, it is local now!
+            if (tx.currency_code == defaultCurrencySymbol) {
+                return Pair(defaultCurrencySymbol, tx.foreign_amount)
+            }
+
             return if (tx.is_rate_calculated) {
-                // If exchange rate is activated, it converts to local currency
-                Pair(defaultCurrencySymbol, tx.equivalent_amount)
+                val isCurrentBaseYer = defaultCurrencySymbol == "ر.ي" || 
+                        defaultCurrencySymbol.uppercase(Locale.ENGLISH) == "YER" || 
+                        defaultCurrencySymbol.contains("يمني")
+                
+                if (isCurrentBaseYer) {
+                    Pair(defaultCurrencySymbol, tx.equivalent_amount)
+                } else {
+                    val yerSymbol = "ر.ي"
+                    val rateYerToDefault = ExchangeRateHelper.getRate(exchangeRatesJson, defaultCurrencySymbol, yerSymbol)
+                    if (rateYerToDefault > 0.0 && rateYerToDefault != 1.0) {
+                        Pair(defaultCurrencySymbol, tx.equivalent_amount * rateYerToDefault)
+                    } else {
+                        val rateTxToDefault = ExchangeRateHelper.getRate(exchangeRatesJson, defaultCurrencySymbol, tx.currency_code)
+                        if (rateTxToDefault > 0.0) {
+                            Pair(defaultCurrencySymbol, tx.foreign_amount * rateTxToDefault)
+                        } else {
+                            Pair(defaultCurrencySymbol, tx.equivalent_amount)
+                        }
+                    }
+                }
             } else {
-                // If exchange rate is NOT activated, it stays in its own currency
                 Pair(tx.currency_code, tx.foreign_amount)
             }
         }
 
-        // 2. Modern explicit local transaction (or saved with explicit currency symbol)
+        // 2. Modern explicit local transaction
         if (tx.currency_code != "DEFAULT" && tx.currency_code.isNotBlank()) {
             if (tx.currency_code == defaultCurrencySymbol) {
                 return Pair(defaultCurrencySymbol, tx.amount)
             } else {
-                // Foreign currency saved but not marked as is_foreign
+                // Since tx.currency_code != defaultCurrencySymbol, it is now foreign relative to current default!
+                val rateTxToDefault = ExchangeRateHelper.getRate(exchangeRatesJson, defaultCurrencySymbol, tx.currency_code)
+                if (rateTxToDefault > 0.0 && rateTxToDefault != 1.0) {
+                    return Pair(defaultCurrencySymbol, tx.amount * rateTxToDefault)
+                }
                 return Pair(tx.currency_code, tx.amount)
             }
         }
@@ -80,7 +112,6 @@ object CurrencyConfig {
         // 3. Legacy transaction: parse description for tag like [ر.س] or [$]
         val parsed = parseTransactionCurrency(tx.description, defaultCurrencySymbol)
         if (parsed.first != defaultCurrencySymbol) {
-            // It was a legacy foreign transaction kept in its own currency (uncalculated)
             return Pair(parsed.first, tx.amount)
         }
 

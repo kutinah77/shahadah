@@ -45,7 +45,7 @@ fun HabayebFilterTabs(
     ) {
         // 1. كبسولة لي عند الناس (المدينين) المتناسقة والمريحة للعين
         val isOwedByThemSelected = selectedFilterTab == 1
-        val formattedOwedByThem = String.format(java.util.Locale.ENGLISH, "%,.0f", totalOwedByThem)
+        val formattedOwedByThem = com.example.domain.FormatUtils.formatDouble(totalOwedByThem)
         val isDark = androidx.compose.foundation.isSystemInDarkTheme()
         val owedByThemBg = if (isDark) {
             if (isOwedByThemSelected) Color(0xFF3E1F1F) else MaterialTheme.colorScheme.surface
@@ -108,7 +108,7 @@ fun HabayebFilterTabs(
 
         // 2. كبسولة علي للناس (الدائنين) المتناسقة والمريحة للعين
         val isOwedToThemSelected = selectedFilterTab == 2
-        val formattedOwedToThem = String.format(java.util.Locale.ENGLISH, "%,.0f", totalOwedToThem)
+        val formattedOwedToThem = com.example.domain.FormatUtils.formatDouble(totalOwedToThem)
         val owedToThemBg = if (isDark) {
             if (isOwedToThemSelected) Color(0xFF1B3B2B) else MaterialTheme.colorScheme.surface
         } else {

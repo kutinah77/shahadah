@@ -49,4 +49,51 @@ object ExchangeRateHelper {
             jsonStr
         }
     }
+
+    fun migrateRates(jsonStr: String, oldBase: String, newBase: String): String {
+        if (oldBase == newBase) return jsonStr
+        return try {
+            val root = JSONObject(if (jsonStr.isBlank()) "{}" else jsonStr)
+            val oldBaseObj = if (root.has(oldBase)) root.getJSONObject(oldBase) else null
+            val newBaseObj = if (root.has(newBase)) root.getJSONObject(newBase) else JSONObject()
+            
+            if (oldBaseObj != null) {
+                var rateOfNewInOld = 0.0
+                if (oldBaseObj.has(newBase)) {
+                    rateOfNewInOld = oldBaseObj.getDouble(newBase)
+                }
+                
+                if (rateOfNewInOld <= 0.0 && newBaseObj.has(oldBase)) {
+                    val rateOfOldInNew = newBaseObj.getDouble(oldBase)
+                    if (rateOfOldInNew > 0.0) {
+                        rateOfNewInOld = 1.0 / rateOfOldInNew
+                    }
+                }
+                
+                if (rateOfNewInOld > 0.0) {
+                    if (!newBaseObj.has(oldBase) || newBaseObj.getDouble(oldBase) <= 0.0) {
+                        newBaseObj.put(oldBase, 1.0 / rateOfNewInOld)
+                    }
+                    
+                    val keys = oldBaseObj.keys()
+                    while (keys.hasNext()) {
+                        val key = keys.next() as String
+                        if (key != newBase && key != oldBase) {
+                            val rateOfKeyInOld = oldBaseObj.getDouble(key)
+                            if (rateOfKeyInOld > 0.0) {
+                                if (!newBaseObj.has(key) || newBaseObj.getDouble(key) <= 0.0) {
+                                    newBaseObj.put(key, rateOfKeyInOld / rateOfNewInOld)
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            
+            root.put(newBase, newBaseObj)
+            root.toString()
+        } catch (e: Exception) {
+            jsonStr
+        }
+    }
 }

@@ -218,7 +218,11 @@ class FinanceViewModel(application: Application) : AndroidViewModel(application)
             val custTxs = txsByCustomer[customer.id] ?: emptyList()
             val netDebtsByCurrency = mutableMapOf<String, BigDecimal>()
             for (tx in custTxs) {
-                val (txCurrency, amountVal) = com.example.ui.screens.habayeb.utils.CurrencyConfig.getTransactionCurrencyAndAmount(tx, defaultCurrency)
+                val (txCurrency, amountVal) = com.example.ui.screens.habayeb.utils.CurrencyConfig.getTransactionCurrencyAndAmount(
+                    tx = tx,
+                    defaultCurrencySymbol = defaultCurrency,
+                    exchangeRatesJson = settings.exchangeRatesJson
+                )
                 val amount = BigDecimal.valueOf(amountVal)
                 val currentVal = netDebtsByCurrency.getOrDefault(txCurrency, BigDecimal.ZERO)
                 val updatedVal = when (tx.type) {

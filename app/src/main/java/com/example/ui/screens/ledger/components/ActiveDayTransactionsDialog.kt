@@ -78,7 +78,7 @@ fun ActiveDayTransactionsDialog(
         },
         text = {
             val sortedTxs = remember(activeDayLedger.transactions) {
-                activeDayLedger.transactions.sortedBy { it.timestamp }
+                activeDayLedger.transactions.sortedByDescending { it.timestamp }
             }
 
             if (sortedTxs.isEmpty()) {

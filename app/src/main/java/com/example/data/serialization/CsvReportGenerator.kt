@@ -25,10 +25,11 @@ object CsvReportGenerator {
         customer: HabayebCustomer,
         transactions: List<HabayebTransaction>,
         currencySymbol: String,
+        exchangeRatesJson: String = "{}",
         onFinished: () -> Unit = {}
     ) {
         scope.launch(Dispatchers.IO) {
-            val file = generateCsvFileInternal(context, customer, transactions, currencySymbol)
+            val file = generateCsvFileInternal(context, customer, transactions, currencySymbol, exchangeRatesJson)
             withContext(Dispatchers.Main) {
                 if (file != null) {
                     triggerShareIntent(context, file, customer.name)
@@ -48,7 +49,8 @@ object CsvReportGenerator {
         context: Context,
         customer: HabayebCustomer,
         transactions: List<HabayebTransaction>,
-        currencySymbol: String
+        currencySymbol: String,
+        exchangeRatesJson: String
     ): File? {
         val fileName = "statement_${customer.name}_${System.currentTimeMillis() % 100000}.csv"
         val file = File(context.cacheDir, fileName)
@@ -75,7 +77,7 @@ object CsvReportGenerator {
             var runningBalance = java.math.BigDecimal.ZERO
             
             chronological.forEachIndexed { index, tx ->
-                val (txCurrency, amountVal) = com.example.ui.screens.habayeb.utils.CurrencyConfig.getTransactionCurrencyAndAmount(tx, currencySymbol)
+                val (txCurrency, amountVal) = com.example.ui.screens.habayeb.utils.CurrencyConfig.getTransactionCurrencyAndAmount(tx, currencySymbol, exchangeRatesJson)
                 val amountDecimal = com.example.ui.helper.HabayebMathHelper.toBigDecimal(amountVal)
                 
                 val typeName = when (tx.type) {
