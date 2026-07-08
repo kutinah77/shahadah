@@ -4,6 +4,7 @@ import android.content.Context
 import androidx.room.Database
 import androidx.room.Room
 import androidx.room.RoomDatabase
+import androidx.room.TypeConverters
 import com.example.data.local.entities.*
 
 @Database(
@@ -19,6 +20,7 @@ import com.example.data.local.entities.*
     version = 23,
     exportSchema = false
 )
+@TypeConverters(BigDecimalConverter::class)
 abstract class AppDatabase : RoomDatabase() {
     abstract fun settingsDao(): SettingsDao
     abstract fun commitmentDao(): CommitmentDao

@@ -28,6 +28,7 @@ import androidx.compose.material.icons.filled.Contacts
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -86,7 +87,7 @@ fun AddCustomerPopup(
     var initialType by rememberSaveable { mutableStateOf("OWED_BY_THEM") } // OWED_BY_THEM (عليه لي) or OWED_TO_THEM (له عندي)
     val currencySymbol = viewModel.settingsState.collectAsStateWithLifecycle().value.currencySymbol
     var selectedTransactionCurrency by rememberSaveable { mutableStateOf(currencySymbol) }
-    var applyExchangeRate by rememberSaveable { mutableStateOf(false) }
+    var applyExchangeRate by rememberSaveable { mutableStateOf(selectedTransactionCurrency != currencySymbol) }
     var showRateSetupOverlay by rememberSaveable { mutableStateOf(false) }
     var tempRateStr by rememberSaveable { mutableStateOf("") }
     
@@ -96,11 +97,17 @@ fun AddCustomerPopup(
     val currencyUsd = context.getString(R.string.currency_usd)
     val currencyYer = context.getString(R.string.currency_yer)
     
-    val settingsRate = when (selectedTransactionCurrency) {
-        currencySar -> if (settings.exchangeRateSar <= 0.0) 160.0 else settings.exchangeRateSar
-        currencyUsd -> if (settings.exchangeRateUsd <= 0.0) 600.0 else settings.exchangeRateUsd
-        currencyYer -> if (settings.exchangeRateYer <= 0.0) 1.0 else settings.exchangeRateYer
-        else -> 1.0
+    val settingsRate = run {
+        val currentRateVal = com.example.ui.screens.habayeb.utils.ExchangeRateHelper.getRate(settings.exchangeRatesJson, currencySymbol, selectedTransactionCurrency)
+        if (currentRateVal > 0.0) {
+            currentRateVal
+        } else {
+            when (selectedTransactionCurrency) {
+                currencySar -> 160.0
+                currencyUsd -> 600.0
+                else -> 1.0
+            }
+        }
     }
 
     var showCalculator by rememberSaveable { mutableStateOf(false) }
@@ -191,7 +198,7 @@ fun AddCustomerPopup(
                                 showRateSetupOverlay = false
                                 applyExchangeRate = false
                             },
-                            onConfirm = { newRate ->
+                            onConfirm = { newRate, _ ->
                                 val newSettings = settings.copy(
                                     exchangeRatesJson = com.example.ui.screens.habayeb.utils.ExchangeRateHelper.setRate(settings.exchangeRatesJson, currencySymbol, selectedTransactionCurrency, newRate)
                                 )
@@ -321,7 +328,7 @@ fun AddCustomerPopup(
                                             .clickable {
                                                 if (selectedTransactionCurrency != sym) {
                                                     selectedTransactionCurrency = sym
-                                                    applyExchangeRate = false
+                                                    applyExchangeRate = (sym != currencySymbol)
                                                 }
                                                 if (sym == currencySymbol) {
                                                     applyExchangeRate = false
@@ -364,48 +371,75 @@ fun AddCustomerPopup(
                             if (selectedTransactionCurrency != currencySymbol) {
                                 Row(
                                     verticalAlignment = Alignment.CenterVertically,
-                                    horizontalArrangement = Arrangement.Start,
+                                    horizontalArrangement = Arrangement.SpaceBetween,
                                     modifier = Modifier
                                         .fillMaxWidth()
-                                        .clip(RoundedCornerShape(8.dp))
-                                        .clickable {
-                                            val hasStoredRate = com.example.ui.screens.habayeb.utils.ExchangeRateHelper.hasRate(settings.exchangeRatesJson, currencySymbol, selectedTransactionCurrency)
-                                            if (!applyExchangeRate) {
-                                                if (hasStoredRate) {
-                                                    applyExchangeRate = true
-                                                } else {
-                                                    tempRateStr = ""
-                                                    showRateSetupOverlay = true
-                                                }
-                                            } else {
-                                                applyExchangeRate = false
+                                        .padding(vertical = 2.dp)
+                                ) {
+                                    // Clickable checkbox + label
+                                    Row(
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        modifier = Modifier
+                                            .clip(RoundedCornerShape(6.dp))
+                                            .clickable {
+                                                applyExchangeRate = !applyExchangeRate
+                                            }
+                                            .padding(4.dp)
+                                    ) {
+                                        Box(
+                                            modifier = Modifier
+                                                .size(14.dp)
+                                                .border(1.5.dp, activeThemeColor, RoundedCornerShape(3.dp))
+                                                .background(if (applyExchangeRate) activeThemeColor else Color.Transparent, RoundedCornerShape(3.dp)),
+                                            contentAlignment = Alignment.Center
+                                        ) {
+                                            if (applyExchangeRate) {
+                                                Icon(
+                                                    imageVector = Icons.Default.Check,
+                                                    contentDescription = null,
+                                                    tint = Color.White,
+                                                    modifier = Modifier.size(10.dp)
+                                                )
                                             }
                                         }
-                                        .padding(vertical = 1.dp)
-                                ) {
-                                    Box(
-                                        modifier = Modifier
-                                            .size(14.dp)
-                                            .border(1.5.dp, activeThemeColor, RoundedCornerShape(3.dp))
-                                            .background(if (applyExchangeRate) activeThemeColor else Color.Transparent, RoundedCornerShape(3.dp)),
-                                        contentAlignment = Alignment.Center
-                                    ) {
-                                        if (applyExchangeRate) {
+                                        Spacer(modifier = Modifier.width(6.dp))
+                                        Text(
+                                            text = stringResource(id = R.string.habayeb_add_with_rate_question),
+                                            fontSize = 10.sp,
+                                            fontWeight = FontWeight.SemiBold,
+                                            color = Color.DarkGray
+                                        )
+                                    }
+
+                                    // Clickable rate display badge with edit icon
+                                    if (applyExchangeRate) {
+                                        val currentRate = com.example.ui.screens.habayeb.utils.ExchangeRateHelper.getRate(settings.exchangeRatesJson, currencySymbol, selectedTransactionCurrency)
+                                        Row(
+                                            verticalAlignment = Alignment.CenterVertically,
+                                            modifier = Modifier
+                                                .clip(RoundedCornerShape(8.dp))
+                                                .background(activeThemeColor.copy(alpha = 0.08f))
+                                                .clickable {
+                                                    tempRateStr = if (currentRate > 0.0) currentRate.toString() else ""
+                                                    showRateSetupOverlay = true
+                                                }
+                                                .padding(horizontal = 8.dp, vertical = 4.dp)
+                                        ) {
+                                            Text(
+                                                text = "1 $selectedTransactionCurrency = $currentRate $currencySymbol",
+                                                fontSize = 10.sp,
+                                                fontWeight = FontWeight.Bold,
+                                                color = activeThemeColor
+                                            )
+                                            Spacer(modifier = Modifier.width(4.dp))
                                             Icon(
-                                                imageVector = Icons.Default.Check,
-                                                contentDescription = null,
-                                                tint = Color.White,
+                                                imageVector = Icons.Default.Edit,
+                                                contentDescription = "تعديل سعر الصرف",
+                                                tint = activeThemeColor,
                                                 modifier = Modifier.size(10.dp)
                                             )
                                         }
                                     }
-                                    Spacer(modifier = Modifier.width(6.dp))
-                                    Text(
-                                        text = stringResource(id = R.string.habayeb_add_with_rate_question),
-                                        fontSize = 10.sp,
-                                        fontWeight = FontWeight.SemiBold,
-                                        color = Color.DarkGray
-                                    )
                                 }
                             }
 
@@ -638,7 +672,7 @@ fun AddCustomerPopup(
                                             1.0
                                         }
                                         val finalEquivalentAmount = if (isForeignSelected && applyExchangeRate) {
-                                            actualInitialAmount * exchangeRate
+                                            com.example.ui.screens.habayeb.utils.CurrencyConfig.convertAmount(actualInitialAmount, currencySymbol, selectedTransactionCurrency, exchangeRate)
                                         } else {
                                             0.0
                                         }

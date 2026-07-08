@@ -2,6 +2,9 @@ package com.example.ui.screens.habayeb.utils
 
 import com.example.data.local.entities.HabayebTransaction
 import java.util.Locale
+import java.math.BigDecimal
+import java.math.MathContext
+import java.math.RoundingMode
 
 data class Currency(
     val code: String,
@@ -52,6 +55,80 @@ object CurrencyConfig {
         return Pair(defaultCurrencySymbol, description)
     }
 
+    fun getCurrencyRank(symbol: String): Int {
+        val sym = symbol.uppercase(Locale.ENGLISH).trim()
+        return when {
+            sym == "ر.ي" || sym == "YER" || sym.contains("يمن") -> 1
+            sym == "ر.س" || sym == "SAR" || sym.contains("سعود") || sym == "د.إ" || sym == "AED" || sym.contains("إمار") -> 2
+            sym == "$" || sym == "USD" || sym.contains("دولار") || sym == "€" || sym == "EUR" || sym.contains("يورو") -> 3
+            else -> 2 // default to medium strength
+        }
+    }
+
+    // دالة لاستخراج المبلغ الأصلي الفعلي للمعاملة بالعملة التي سجلت بها
+    fun getOriginalAmount(tx: HabayebTransaction): BigDecimal {
+        return if (tx.is_foreign) {
+            BigDecimal(tx.foreign_amount.toString())
+        } else {
+            BigDecimal(tx.amount.toString())
+        }
+    }
+    
+    // دالة التحويل الآمنة بين العملات بناءً على أسعار الصرف الحالية
+    fun convert(amount: BigDecimal, rate: BigDecimal, toWeaker: Boolean): BigDecimal {
+        if (rate <= BigDecimal.ZERO) return amount
+        return if (toWeaker) {
+            amount.multiply(rate, MathContext.DECIMAL128)
+        } else {
+            amount.divide(rate, 4, RoundingMode.HALF_UP)
+        }
+    }
+
+    fun convertAmount(
+        amount: Double,
+        baseCurrencySymbol: String,
+        foreignCurrencySymbol: String,
+        rate: Double
+    ): Double {
+        if (rate <= 0.0) return amount
+        
+        val base = baseCurrencySymbol.uppercase(Locale.ENGLISH).trim()
+        val foreign = foreignCurrencySymbol.uppercase(Locale.ENGLISH).trim()
+        
+        // اعتمد دائماً وأبداً على أسعار الصرف المباشرة (Direct Exchange Rates) المخزنة في الـ JSON للعملة الافتراضية النشطة
+        // تحديد اتجاه التحويل المباشر (ضرب أو قسمة) بناءً على العلاقة الثنائية المباشرة بين العملتين دون أي عملة وسيطة
+        val toWeaker = when {
+            // إذا كانت العملة الأساسية ر.س أو ر.ي والعملة الأجنبية دولار أو يورو: نقوم بالضرب (التحويل لعملة أضعف)
+            (base == "ر.س" || base == "SAR" || base == "ر.ي" || base == "YER" || base == "د.إ" || base == "AED") && 
+            (foreign == "$" || foreign == "USD" || foreign == "€" || foreign == "EUR") -> true
+            
+            // إذا كانت العملة الأساسية ر.ي والعملة الأجنبية ر.س أو د.إ: نقوم بالضرب
+            (base == "ر.ي" || base == "YER") && 
+            (foreign == "ر.س" || foreign == "SAR" || foreign == "د.إ" || foreign == "AED") -> true
+            
+            // الاتجاه المعاكس (التحويل لعملة أقوى): نقوم بالقسمة
+            (base == "$" || base == "USD" || base == "€" || base == "EUR") && 
+            (foreign == "ر.س" || foreign == "SAR" || foreign == "ر.ي" || foreign == "YER" || foreign == "د.إ" || foreign == "AED") -> false
+            
+            (base == "ر.س" || base == "SAR" || base == "د.إ" || base == "AED") && 
+            (foreign == "ر.ي" || foreign == "YER") -> false
+            
+            // نظام الرتب الافتراضي كخيار احتياطي عام ومستمر للأمان
+            else -> {
+                val rankBase = getCurrencyRank(baseCurrencySymbol)
+                val rankForeign = getCurrencyRank(foreignCurrencySymbol)
+                rankForeign >= rankBase
+            }
+        }
+        
+        return try {
+            convert(BigDecimal(amount.toString()), BigDecimal(rate.toString()), toWeaker).toDouble()
+        } catch (e: Exception) {
+            // Fallback
+            if (toWeaker) amount * rate else amount / rate
+        }
+    }
+
     /**
      * Resolves the true currency code and transaction amount for a given transaction,
      * handling both modern schema fields and legacy description tags,
@@ -70,25 +147,13 @@ object CurrencyConfig {
             }
 
             return if (tx.is_rate_calculated) {
-                val isCurrentBaseYer = defaultCurrencySymbol == "ر.ي" || 
-                        defaultCurrencySymbol.uppercase(Locale.ENGLISH) == "YER" || 
-                        defaultCurrencySymbol.contains("يمني")
-                
-                if (isCurrentBaseYer) {
-                    Pair(defaultCurrencySymbol, tx.equivalent_amount)
+                // Dynamically convert the foreign_amount to the current default base currency using the current rate
+                val currentRate = ExchangeRateHelper.getRate(exchangeRatesJson, defaultCurrencySymbol, tx.currency_code)
+                if (currentRate > 0.0) {
+                    val converted = convertAmount(tx.foreign_amount, defaultCurrencySymbol, tx.currency_code, currentRate)
+                    Pair(defaultCurrencySymbol, converted)
                 } else {
-                    val yerSymbol = "ر.ي"
-                    val rateYerToDefault = ExchangeRateHelper.getRate(exchangeRatesJson, defaultCurrencySymbol, yerSymbol)
-                    if (rateYerToDefault > 0.0 && rateYerToDefault != 1.0) {
-                        Pair(defaultCurrencySymbol, tx.equivalent_amount * rateYerToDefault)
-                    } else {
-                        val rateTxToDefault = ExchangeRateHelper.getRate(exchangeRatesJson, defaultCurrencySymbol, tx.currency_code)
-                        if (rateTxToDefault > 0.0) {
-                            Pair(defaultCurrencySymbol, tx.foreign_amount * rateTxToDefault)
-                        } else {
-                            Pair(defaultCurrencySymbol, tx.equivalent_amount)
-                        }
-                    }
+                    Pair(defaultCurrencySymbol, tx.equivalent_amount)
                 }
             } else {
                 Pair(tx.currency_code, tx.foreign_amount)
@@ -101,9 +166,10 @@ object CurrencyConfig {
                 return Pair(defaultCurrencySymbol, tx.amount)
             } else {
                 // Since tx.currency_code != defaultCurrencySymbol, it is now foreign relative to current default!
-                val rateTxToDefault = ExchangeRateHelper.getRate(exchangeRatesJson, defaultCurrencySymbol, tx.currency_code)
-                if (rateTxToDefault > 0.0 && rateTxToDefault != 1.0) {
-                    return Pair(defaultCurrencySymbol, tx.amount * rateTxToDefault)
+                val currentRate = ExchangeRateHelper.getRate(exchangeRatesJson, defaultCurrencySymbol, tx.currency_code)
+                if (currentRate > 0.0) {
+                    val converted = convertAmount(tx.amount, defaultCurrencySymbol, tx.currency_code, currentRate)
+                    return Pair(defaultCurrencySymbol, converted)
                 }
                 return Pair(tx.currency_code, tx.amount)
             }
@@ -112,6 +178,11 @@ object CurrencyConfig {
         // 3. Legacy transaction: parse description for tag like [ر.س] or [$]
         val parsed = parseTransactionCurrency(tx.description, defaultCurrencySymbol)
         if (parsed.first != defaultCurrencySymbol) {
+            val currentRate = ExchangeRateHelper.getRate(exchangeRatesJson, defaultCurrencySymbol, parsed.first)
+            if (currentRate > 0.0) {
+                val converted = convertAmount(tx.amount, defaultCurrencySymbol, parsed.first, currentRate)
+                return Pair(defaultCurrencySymbol, converted)
+            }
             return Pair(parsed.first, tx.amount)
         }
 

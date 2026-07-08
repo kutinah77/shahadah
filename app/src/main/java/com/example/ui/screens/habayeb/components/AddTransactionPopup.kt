@@ -48,6 +48,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Calculate
 import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.CalendarToday
 import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material3.Button
@@ -147,7 +148,7 @@ fun AddTransactionPopup(
     }
 
     val isForeignSelected = selectedTransactionCurrency != currencySymbol
-    var applyExchangeRate by rememberSaveable { mutableStateOf(editingTransaction?.is_rate_calculated ?: false) }
+    var applyExchangeRate by rememberSaveable { mutableStateOf(editingTransaction?.is_rate_calculated ?: (selectedTransactionCurrency != currencySymbol)) }
     
     val currentRateVal = com.example.ui.screens.habayeb.utils.ExchangeRateHelper.getRate(settings.exchangeRatesJson, currencySymbol, selectedTransactionCurrency)
     val settingsRate = if (currentRateVal <= 0.0) 1.0 else currentRateVal
@@ -212,7 +213,7 @@ fun AddTransactionPopup(
                 }
 
                 val finalEquivalentAmount = if (isForeignSelected && applyExchangeRate) {
-                    amount * settingsRate
+                    com.example.ui.screens.habayeb.utils.CurrencyConfig.convertAmount(amount, currencySymbol, selectedTransactionCurrency, settingsRate)
                 } else {
                     0.0
                 }
@@ -288,11 +289,14 @@ fun AddTransactionPopup(
                                 showRateSetupOverlay = false
                                 applyExchangeRate = false
                             },
-                            onConfirm = { newRate ->
+                            onConfirm = { newRate, applyToHistorical ->
                                 val newSettings = settings.copy(
                                     exchangeRatesJson = com.example.ui.screens.habayeb.utils.ExchangeRateHelper.setRate(settings.exchangeRatesJson, currencySymbol, selectedTransactionCurrency, newRate)
                                 )
                                 viewModel.saveSettings(newSettings)
+                                if (applyToHistorical) {
+                                    viewModel.revalueHistoricalTransactions(selectedTransactionCurrency, newRate)
+                                }
                                 applyExchangeRate = true
                                 showRateSetupOverlay = false
                             },
@@ -503,7 +507,7 @@ fun AddTransactionPopup(
                                 .clickable {
                                     if (selectedTransactionCurrency != sym) {
                                         selectedTransactionCurrency = sym
-                                        applyExchangeRate = false
+                                        applyExchangeRate = (sym != currencySymbol)
                                     }
                                     if (sym == currencySymbol) {
                                         applyExchangeRate = false
@@ -547,51 +551,76 @@ fun AddTransactionPopup(
                     Spacer(modifier = Modifier.height(6.dp))
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.Start,
+                        horizontalArrangement = Arrangement.SpaceBetween,
                         modifier = Modifier
                             .fillMaxWidth()
                             .padding(horizontal = 16.dp)
-                            .clip(RoundedCornerShape(8.dp))
-                            .clickable {
-                                val hasStoredRate = com.example.ui.screens.habayeb.utils.ExchangeRateHelper.hasRate(settings.exchangeRatesJson, currencySymbol, selectedTransactionCurrency)
-                                if (!applyExchangeRate) {
-                                    if (hasStoredRate) {
-                                        applyExchangeRate = true
-                                    } else {
-                                        tempRateStr = ""
-                                        showRateSetupOverlay = true
-                                    }
-                                } else {
-                                    applyExchangeRate = false
+                            .padding(vertical = 2.dp)
+                    ) {
+                        // Clickable checkbox + label
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier
+                                .clip(RoundedCornerShape(6.dp))
+                                .clickable {
+                                    applyExchangeRate = !applyExchangeRate
+                                }
+                                .padding(4.dp)
+                        ) {
+                            Box(
+                                modifier = Modifier
+                                    .size(16.dp)
+                                    .border(1.dp, activeThemeColor, RoundedCornerShape(4.dp))
+                                    .background(if (applyExchangeRate) activeThemeColor else Color.Transparent, RoundedCornerShape(4.dp)),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                if (applyExchangeRate) {
+                                    Icon(
+                                        imageVector = Icons.Default.Check,
+                                        contentDescription = null,
+                                        tint = Color.White,
+                                        modifier = Modifier.size(12.dp)
+                                    )
                                 }
                             }
-                            .padding(vertical = 4.dp)
-                    ) {
-                        // Square (checkbox) on the right
-                        Box(
-                            modifier = Modifier
-                                .size(16.dp)
-                                .border(1.dp, activeThemeColor, RoundedCornerShape(4.dp))
-                                .background(if (applyExchangeRate) activeThemeColor else Color.Transparent, RoundedCornerShape(4.dp)),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            if (applyExchangeRate) {
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Text(
+                                text = stringResource(id = R.string.add_transaction_exchange_rate_prompt),
+                                fontSize = 11.sp,
+                                fontWeight = FontWeight.SemiBold,
+                                color = Color.DarkGray
+                            )
+                        }
+
+                        // Clickable rate display badge with edit icon
+                        if (applyExchangeRate) {
+                            val currentRate = com.example.ui.screens.habayeb.utils.ExchangeRateHelper.getRate(settings.exchangeRatesJson, currencySymbol, selectedTransactionCurrency)
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                modifier = Modifier
+                                    .clip(RoundedCornerShape(8.dp))
+                                    .background(activeThemeColor.copy(alpha = 0.08f))
+                                    .clickable {
+                                        tempRateStr = if (currentRate > 0.0) currentRate.toString() else ""
+                                        showRateSetupOverlay = true
+                                    }
+                                    .padding(horizontal = 8.dp, vertical = 4.dp)
+                            ) {
+                                Text(
+                                    text = "1 $selectedTransactionCurrency = $currentRate $currencySymbol",
+                                    fontSize = 10.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = activeThemeColor
+                                )
+                                Spacer(modifier = Modifier.width(4.dp))
                                 Icon(
-                                    imageVector = Icons.Default.Check,
-                                    contentDescription = null,
-                                    tint = Color.White,
-                                    modifier = Modifier.size(12.dp)
+                                    imageVector = Icons.Default.Edit,
+                                    contentDescription = "تعديل سعر الصرف",
+                                    tint = activeThemeColor,
+                                    modifier = Modifier.size(10.dp)
                                 )
                             }
                         }
-                        Spacer(modifier = Modifier.width(6.dp))
-                        // Text on the left of the square
-                        Text(
-                            text = stringResource(id = R.string.add_transaction_exchange_rate_prompt),
-                            fontSize = 11.sp,
-                            fontWeight = FontWeight.SemiBold,
-                            color = Color.DarkGray
-                        )
                     }
                 }
 

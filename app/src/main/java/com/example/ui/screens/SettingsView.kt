@@ -1145,12 +1145,15 @@ fun SettingsView(
                     currenciesToSetup = emptyList()
                 }
             },
-            onConfirm = { newRate ->
+            onConfirm = { newRate, applyToHistorical ->
                 val currentSettings = viewModel.settingsState.value
                 val updatedSettings = currentSettings.copy(
                     exchangeRatesJson = com.example.ui.screens.habayeb.utils.ExchangeRateHelper.setRate(currentSettings.exchangeRatesJson, currencySymbol, targetCurrency, newRate)
                 )
                 viewModel.saveSettings(updatedSettings)
+                if (applyToHistorical) {
+                    viewModel.revalueHistoricalTransactions(targetCurrency, newRate)
+                }
                 if (currentSetupIndex + 1 < currenciesToSetup.size) {
                     currentSetupIndex++
                 } else {

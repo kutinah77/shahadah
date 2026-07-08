@@ -175,6 +175,37 @@ fun CustomerItemRow(
                             fontWeight = FontWeight.Normal,
                             color = textSecondaryColor
                         )
+
+                        // Active Foreign Currencies (Inactive exchange rate) Section
+                        val nonZeroForeign = customer.foreignDebts.filter { it.value.compareTo(java.math.BigDecimal.ZERO) != 0 }
+                        if (nonZeroForeign.isNotEmpty()) {
+                            Spacer(modifier = Modifier.height(4.dp))
+                            Row(
+                                horizontalArrangement = Arrangement.spacedBy(4.dp),
+                                modifier = Modifier.padding(top = 2.dp)
+                            ) {
+                                nonZeroForeign.forEach { (currency, balance) ->
+                                    val isBalPositive = balance.compareTo(java.math.BigDecimal.ZERO) > 0
+                                    val badgeBgColor = if (isBalPositive) Color(0xFFFEF2F2) else Color(0xFFF0FDF4)
+                                    val badgeTextColor = if (isBalPositive) Color(0xFF991B1B) else Color(0xFF166534)
+                                    val badgeBorderColor = if (isBalPositive) Color(0xFFFCA5A5) else Color(0xFF86EFAC)
+                                    
+                                    Box(
+                                        modifier = Modifier
+                                            .background(badgeBgColor, RoundedCornerShape(4.dp))
+                                            .border(0.5.dp, badgeBorderColor, RoundedCornerShape(4.dp))
+                                            .padding(horizontal = 4.dp, vertical = 2.dp)
+                                    ) {
+                                        Text(
+                                            text = "$currency: ${formatCurrency(balance.abs().toDouble(), "")}",
+                                            fontSize = 9.sp,
+                                            fontWeight = FontWeight.Bold,
+                                            color = badgeTextColor
+                                        )
+                                    }
+                                }
+                            }
+                        }
                     }
                 }
 

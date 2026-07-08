@@ -17,7 +17,8 @@ data class CustomerUiState(
     val displayCurrencySymbol: String = "",
     val lastTransactionTimestamp: Long = 0L,
     val isStable: Boolean = true,
-    val originalCustomer: HabayebCustomer
+    val originalCustomer: HabayebCustomer,
+    val foreignDebts: Map<String, java.math.BigDecimal> = emptyMap()
 )
 
 @Immutable

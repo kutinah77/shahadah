@@ -51,7 +51,7 @@ fun ExchangeRateSetupContent(
     initialRateStr: String,
     activeThemeColor: Color,
     onDismiss: () -> Unit,
-    onConfirm: (Double) -> Unit,
+    onConfirm: (Double, Boolean) -> Unit,
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
@@ -59,6 +59,9 @@ fun ExchangeRateSetupContent(
     var isChecked by remember { mutableStateOf(false) }
     var showUncheckedError by remember { mutableStateOf(false) }
     var isFocused by remember { mutableStateOf(false) }
+
+    var showHistoricalConfirmDialog by remember { mutableStateOf(false) }
+    var validatedRate by remember { mutableStateOf(0.0) }
 
     val focusRequester = remember { FocusRequester() }
     val keyboardController = LocalSoftwareKeyboardController.current
@@ -88,6 +91,51 @@ fun ExchangeRateSetupContent(
         targetValue = if (isFocused) activeThemeColor else if (isDark) MaterialTheme.colorScheme.outlineVariant else Color.LightGray.copy(alpha = 0.4f),
         label = "inputBorder"
     )
+
+    if (showHistoricalConfirmDialog) {
+        AlertDialog(
+            onDismissRequest = { 
+                showHistoricalConfirmDialog = false 
+            },
+            title = {
+                Text(
+                    text = "تحديث أسعار الصرف التاريخية",
+                    fontSize = 16.sp,
+                    fontWeight = FontWeight.Bold,
+                    textAlign = TextAlign.Right,
+                    modifier = Modifier.fillMaxWidth()
+                )
+            },
+            text = {
+                Text(
+                    text = "هل تريد تطبيق سعر الصرف الجديد على جميع العمليات السابقة النشطة لهذه العملة؟",
+                    fontSize = 14.sp,
+                    textAlign = TextAlign.Right,
+                    modifier = Modifier.fillMaxWidth()
+                )
+            },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        showHistoricalConfirmDialog = false
+                        onConfirm(validatedRate, true)
+                    }
+                ) {
+                    Text("نعم، تطبيق الكل", color = activeThemeColor, fontWeight = FontWeight.Bold)
+                }
+            },
+            dismissButton = {
+                TextButton(
+                    onClick = {
+                        showHistoricalConfirmDialog = false
+                        onConfirm(validatedRate, false)
+                    }
+                ) {
+                    Text("لا، الإضافة فقط للمستقبل", color = Color.Gray)
+                }
+            }
+        )
+    }
 
     CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
         Column(
@@ -256,7 +304,8 @@ fun ExchangeRateSetupContent(
                             showUncheckedError = true
                             Toast.makeText(context, context.getString(R.string.habayeb_toast_confirm_rate_first), Toast.LENGTH_SHORT).show()
                         } else {
-                            onConfirm(doubleRate)
+                            validatedRate = doubleRate
+                            showHistoricalConfirmDialog = true
                         }
                     },
                     modifier = Modifier
@@ -283,7 +332,7 @@ fun ExchangeRateSetupDialog(
     initialRateStr: String,
     activeThemeColor: Color,
     onDismiss: () -> Unit,
-    onConfirm: (Double) -> Unit
+    onConfirm: (Double, Boolean) -> Unit
 ) {
     val isDark = androidx.compose.foundation.isSystemInDarkTheme()
     Dialog(

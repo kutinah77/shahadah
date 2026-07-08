@@ -1177,13 +1177,16 @@ fun CustomerHistoryOverlay(
                                 onDismiss = {
                                     showRateSetupOverlay = false
                                 },
-                                onConfirm = { newRate ->
+                                onConfirm = { newRate, applyToHistorical ->
                                     val settings = viewModel.settingsState.value
                                     val newSettings = settings.copy(
                                         exchangeRatesJson = com.example.ui.screens.habayeb.utils.ExchangeRateHelper.setRate(settings.exchangeRatesJson, currencySymbol, setupOverlayCurrency, newRate)
                                     )
                                     viewModel.saveSettings(newSettings)
                                     viewModel.updateTransactionExchangeRate(tx.id, newRate, true)
+                                    if (applyToHistorical) {
+                                        viewModel.revalueHistoricalTransactions(setupOverlayCurrency, newRate)
+                                    }
                                     showRateSetupOverlay = false
                                     showRateModifyDialog = false
                                     exchangeTxToModify = null

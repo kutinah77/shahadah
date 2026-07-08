@@ -25,6 +25,7 @@ import java.math.BigDecimal
 import java.math.RoundingMode
 import java.text.DecimalFormat
 import java.util.UUID
+import java.util.Locale
 
 sealed class UiEvent {
     data class ShowToast(val messageRes: Int, val isLong: Boolean = false) : UiEvent()
@@ -216,44 +217,67 @@ class FinanceViewModel(application: Application) : AndroidViewModel(application)
         val txsByCustomer = transactions.groupBy { it.customerId }
         val customerStates = customers.map { customer ->
             val custTxs = txsByCustomer[customer.id] ?: emptyList()
-            val netDebtsByCurrency = mutableMapOf<String, BigDecimal>()
+            
+            var defaultCurrencyTotal = BigDecimal.ZERO
+            val foreignDebtsMap = mutableMapOf<String, BigDecimal>()
+            
             for (tx in custTxs) {
-                val (txCurrency, amountVal) = com.example.ui.screens.habayeb.utils.CurrencyConfig.getTransactionCurrencyAndAmount(
-                    tx = tx,
-                    defaultCurrencySymbol = defaultCurrency,
-                    exchangeRatesJson = settings.exchangeRatesJson
-                )
-                val amount = BigDecimal.valueOf(amountVal)
-                val currentVal = netDebtsByCurrency.getOrDefault(txCurrency, BigDecimal.ZERO)
-                val updatedVal = when (tx.type) {
-                    HabayebTransactionType.OWED_BY_THEM.name -> currentVal.add(amount)
-                    HabayebTransactionType.PAYMENT_BY_THEM.name -> currentVal.subtract(amount)
-                    HabayebTransactionType.OWED_TO_THEM.name -> currentVal.subtract(amount)
-                    HabayebTransactionType.PAYMENT_TO_THEM.name -> currentVal.add(amount)
-                    else -> currentVal
+                // Determine transaction currency
+                val txCurrency = if (tx.is_foreign) {
+                    tx.currency_code
+                } else {
+                    if (tx.currency_code != "DEFAULT" && tx.currency_code.isNotBlank()) {
+                        tx.currency_code
+                    } else {
+                        defaultCurrency
+                    }
                 }
-                netDebtsByCurrency[txCurrency] = updatedVal
+                
+                val isSameCurrency = txCurrency.uppercase(Locale.ENGLISH).trim() == defaultCurrency.uppercase(Locale.ENGLISH).trim()
+                
+                val isPositive = when (tx.type) {
+                    HabayebTransactionType.OWED_BY_THEM.name,
+                    HabayebTransactionType.PAYMENT_TO_THEM.name -> true
+                    HabayebTransactionType.PAYMENT_BY_THEM.name,
+                    HabayebTransactionType.OWED_TO_THEM.name -> false
+                    else -> true
+                }
+                
+                if (isSameCurrency) {
+                    // Same currency: use original amount directly
+                    val originalAmt = if (tx.is_foreign) BigDecimal(tx.foreign_amount.toString()) else BigDecimal(tx.amount.toString())
+                    val delta = if (isPositive) originalAmt else originalAmt.negate()
+                    defaultCurrencyTotal = defaultCurrencyTotal.add(delta)
+                } else {
+                    // Different currency:
+                    if (tx.is_rate_calculated) {
+                        // Rate calculated active: use equivalent_amount
+                        val equivalentAmt = BigDecimal(tx.equivalent_amount.toString())
+                        val delta = if (isPositive) equivalentAmt else equivalentAmt.negate()
+                        defaultCurrencyTotal = defaultCurrencyTotal.add(delta)
+                    } else {
+                        // Inactive rate: accumulate in separate foreign debts
+                        val originalAmt = if (tx.is_foreign) BigDecimal(tx.foreign_amount.toString()) else BigDecimal(tx.amount.toString())
+                        val delta = if (isPositive) originalAmt else originalAmt.negate()
+                        val currentForeignTotal = foreignDebtsMap.getOrDefault(txCurrency, BigDecimal.ZERO)
+                        foreignDebtsMap[txCurrency] = currentForeignTotal.add(delta)
+                    }
+                }
             }
 
-            val netDebt = (netDebtsByCurrency[defaultCurrency] ?: BigDecimal.ZERO).toDouble()
+            val netDebt = defaultCurrencyTotal.toDouble()
 
-            val nonZeroDebts = netDebtsByCurrency.filter { it.value.compareTo(BigDecimal.ZERO) != 0 }
-            val (displayCurrency, displayDebtVal) = if (nonZeroDebts.isNotEmpty()) {
-                if (nonZeroDebts.containsKey(defaultCurrency)) {
-                    Pair(defaultCurrency, nonZeroDebts[defaultCurrency]!!.toDouble())
-                } else {
-                    val firstKey = nonZeroDebts.keys.first()
-                    Pair(firstKey, nonZeroDebts[firstKey]!!.toDouble())
-                }
-            } else if (netDebtsByCurrency.isNotEmpty()) {
-                if (netDebtsByCurrency.containsKey(defaultCurrency)) {
-                    Pair(defaultCurrency, netDebtsByCurrency[defaultCurrency]!!.toDouble())
-                } else {
-                    val firstKey = netDebtsByCurrency.keys.first()
-                    Pair(firstKey, netDebtsByCurrency[firstKey]!!.toDouble())
-                }
+            // Determine primary display values
+            val (displayCurrency, displayDebtVal) = if (defaultCurrencyTotal.compareTo(BigDecimal.ZERO) != 0) {
+                Pair(defaultCurrency, defaultCurrencyTotal.toDouble())
             } else {
-                Pair(defaultCurrency, 0.0)
+                val nonZeroForeign = foreignDebtsMap.filter { it.value.compareTo(BigDecimal.ZERO) != 0 }
+                if (nonZeroForeign.isNotEmpty()) {
+                    val first = nonZeroForeign.entries.first()
+                    Pair(first.key, first.value.toDouble())
+                } else {
+                    Pair(defaultCurrency, 0.0)
+                }
             }
 
             val lastTxTime = custTxs.maxOfOrNull { it.timestamp } ?: customer.createdAt
@@ -268,7 +292,8 @@ class FinanceViewModel(application: Application) : AndroidViewModel(application)
                 displayNetDebt = displayDebtVal,
                 displayCurrencySymbol = displayCurrency,
                 lastTransactionTimestamp = lastTxTime,
-                originalCustomer = customer
+                originalCustomer = customer,
+                foreignDebts = foreignDebtsMap
             )
         }
         var totalOwedByThem = BigDecimal.ZERO
@@ -398,7 +423,13 @@ class FinanceViewModel(application: Application) : AndroidViewModel(application)
                 val tx = repository.getHabayebTransactionById(txId)
                 if (tx != null) {
                     val finalRate = if (newRate <= 0.0) 1.0 else newRate
-                    val finalEquivalent = tx.foreign_amount * finalRate
+                    val defaultCurrency = settingsState.value.currencySymbol
+                    val finalEquivalent = com.example.ui.screens.habayeb.utils.CurrencyConfig.convertAmount(
+                        tx.foreign_amount,
+                        defaultCurrency,
+                        tx.currency_code,
+                        finalRate
+                    )
                     
                     if (tx.linkedMainTxId != null) {
                         val mainTx = repository.getTransactionById(tx.linkedMainTxId)
@@ -416,6 +447,45 @@ class FinanceViewModel(application: Application) : AndroidViewModel(application)
                     )
                     repository.insertHabayebTransaction(updatedTx)
                 }
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
+        }
+    }
+
+    fun revalueHistoricalTransactions(currencyCode: String, newRate: Double) {
+        viewModelScope.launch(Dispatchers.IO) {
+            try {
+                val transactions = repository.getAllTransactionsDirect()
+                val defaultCurrency = settingsState.value.currencySymbol
+                val finalRate = if (newRate <= 0.0) 1.0 else newRate
+                
+                transactions.forEach { tx ->
+                    if (tx.is_foreign && tx.currency_code == currencyCode && tx.is_rate_calculated) {
+                        val finalEquivalent = com.example.ui.screens.habayeb.utils.CurrencyConfig.convertAmount(
+                            tx.foreign_amount,
+                            defaultCurrency,
+                            tx.currency_code,
+                            finalRate
+                        )
+                        
+                        if (tx.linkedMainTxId != null) {
+                            val mainTx = repository.getTransactionById(tx.linkedMainTxId)
+                            if (mainTx != null) {
+                                val updatedMainTx = mainTx.copy(amount = finalEquivalent)
+                                repository.saveTransaction(updatedMainTx)
+                            }
+                        }
+                        
+                        val updatedTx = tx.copy(
+                            exchange_rate = finalRate,
+                            equivalent_amount = finalEquivalent,
+                            amount = finalEquivalent
+                        )
+                        repository.insertHabayebTransaction(updatedTx)
+                    }
+                }
+                triggerSilentLocalBackup()
             } catch (e: Exception) {
                 e.printStackTrace()
             }
@@ -1489,12 +1559,12 @@ class FinanceViewModel(application: Application) : AndroidViewModel(application)
         val finalSymbol = symbol.ifEmpty { getApplication<Application>().getString(R.string.currency_yer) }
         return try {
             val symbols = java.text.DecimalFormatSymbols(java.util.Locale.ENGLISH)
-            val formatter = DecimalFormat("#,##0", symbols)
+            val formatter = DecimalFormat("#,##0.####", symbols)
             val formatted = formatter.format(amount)
             "$formatted $finalSymbol"
         } catch (e: Exception) {
             val symbols = java.text.DecimalFormatSymbols(java.util.Locale.ENGLISH)
-            val formatter = DecimalFormat("#,##0", symbols)
+            val formatter = DecimalFormat("#,##0.####", symbols)
             val formatted = formatter.format(amount)
             "$formatted $finalSymbol"
         }
@@ -1503,7 +1573,7 @@ class FinanceViewModel(application: Application) : AndroidViewModel(application)
     fun formatDoubleCurrency(amount: Double, symbol: String = ""): String {
         val finalSymbol = symbol.ifEmpty { getApplication<Application>().getString(R.string.currency_yer) }
         val symbols = java.text.DecimalFormatSymbols(java.util.Locale.ENGLISH)
-        val formatter = DecimalFormat("#,##0", symbols)
+        val formatter = DecimalFormat("#,##0.####", symbols)
         val formatted = formatter.format(amount)
         return "$formatted $finalSymbol"
     }
